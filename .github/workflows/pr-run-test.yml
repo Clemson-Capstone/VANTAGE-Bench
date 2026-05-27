@@ -1,0 +1,24 @@
+name: syntax_check
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install minimal dependencies
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Check syntax
+        run: python -m py_compile vlmeval/dataset/vantage_vqa.py vlmeval/dataset/vantage_temporal.py vlmeval/dataset/vantage_dvc.py vlmeval/dataset/vantage_event_verification.py vlmeval/dataset/vantage_sot.py && echo "Syntax OK"
