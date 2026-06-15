@@ -1275,7 +1275,59 @@ qwen3vl_series = {
         top_k=20,
         max_new_tokens=16384,
     ),
-    
+    # Local vLLM inference — VANTAGE benchmark runs (paper + anon splits)
+    'Qwen3-VL-8B-vLLM': partial(
+        Qwen3VLChat,
+        model_path='Qwen/Qwen3-VL-8B-Instruct',
+        use_custom_prompt=False,
+        use_vllm=True,
+        temperature=0.7,
+        presence_penalty=1.5,
+        repetition_penalty=1.0,
+        top_p=0.8,
+        top_k=20,
+        max_new_tokens=8192,
+        chat_template_kwargs={'enable_thinking': False},
+    ),
+    'Qwen3-VL-8B-vLLM-SOT': partial(
+        Qwen3VLChat,
+        model_path='Qwen/Qwen3-VL-8B-Instruct',
+        use_custom_prompt=False,
+        use_vllm=True,
+        temperature=0.0,
+        presence_penalty=1.5,
+        repetition_penalty=1.0,
+        top_p=0.8,
+        top_k=20,
+        max_new_tokens=16384,
+        chat_template_kwargs={'enable_thinking': False},
+    ),
+    'Qwen3-VL-32B-vLLM': partial(
+        Qwen3VLChat,
+        model_path='Qwen/Qwen3-VL-32B-Instruct',
+        use_custom_prompt=False,
+        use_vllm=True,
+        temperature=0.7,
+        presence_penalty=1.5,
+        repetition_penalty=1.0,
+        top_p=0.8,
+        top_k=20,
+        max_new_tokens=8192,
+        chat_template_kwargs={'enable_thinking': False},
+    ),
+    'Qwen3-VL-32B-vLLM-SOT': partial(
+        Qwen3VLChat,
+        model_path='Qwen/Qwen3-VL-32B-Instruct',
+        use_custom_prompt=False,
+        use_vllm=True,
+        temperature=0.0,
+        presence_penalty=1.5,
+        repetition_penalty=1.0,
+        top_p=0.8,
+        top_k=20,
+        max_new_tokens=16384,
+        chat_template_kwargs={'enable_thinking': False},
+    ),
 }
 
 qwen3_5_series = {
@@ -2085,6 +2137,25 @@ cosmos_series = {
         temperature=0,
         retry=10,
         timeout=600,
+    ),
+    'Cosmos3-Nano': partial(Cosmos3, model_path='nvidia/Cosmos3-Nano'),
+    # Cosmos3-Nano-vLLM requires a pre-converted Qwen3VL checkpoint.
+    # Run scripts/convert_cosmos3_for_vllm.py first, then override model_path
+    # via a config JSON file pointing to the converted checkpoint directory.
+    'Cosmos3-Nano-vLLM': partial(
+        Cosmos3vLLM,
+        model_path='nvidia/Cosmos3-Nano',
+        tensor_parallel_size=1,
+    ),
+    'CosmosReason2-8B-vLLM': partial(
+        Cosmos3vLLM,
+        model_path='nvidia/Cosmos-Reason2-8B',
+        tensor_parallel_size=1,
+    ),
+    'CosmosReason2-32B-vLLM': partial(
+        Cosmos3vLLM,
+        model_path='nvidia/Cosmos-Reason2-32B',
+        tensor_parallel_size=2,
     ),
 }
 

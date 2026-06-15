@@ -1,0 +1,31 @@
+{
+    "_comment": "Cosmos-Reason2-8B via HuggingFace transformers (no vLLM). Requires: pip install qwen-vl-utils. Min GPU: 1x16GB VRAM. Slower than vLLM but no extra install.",
+    "model": {
+        "Cosmos-Reason2-8B-HF": {
+            "class": "CosmosHF",
+            "model_path": "nvidia/Cosmos-Reason2-8B",
+            "temperature": 0.0,
+            "max_new_tokens": 4096,
+            "repetition_penalty": 1.05
+        }
+    },
+    "data": {
+        "VANTAGE_VQA_8frame": {},
+        "VANTAGE_EventVerification_8frame": {},
+        "VANTAGE_Temporal_8frame": {},
+        "VANTAGE_DVC_8frame": {},
+        "VANTAGE_SOT": {},
+        "VANTAGE_2DGrounding": {
+            "class": "VANTAGE_2DGroundingDataset",
+            "dataset": "VANTAGE_2DGrounding"
+        },
+        "VANTAGE_2DPointing": {
+            "class": "VANTAGE_2DPointing",
+            "dataset": "VANTAGE_2DPointing"
+        },
+        "Astro2D": {
+            "class": "Astro2DDetectionDataset",
+            "dataset": "Astro2D"
+        }
+    }
+}

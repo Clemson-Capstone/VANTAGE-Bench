@@ -1,0 +1,36 @@
+{
+    "_comment": "Cosmos-Reason2-8B via vLLM. Requires: pip install vllm qwen-vl-utils. Min GPU: 1x24GB VRAM.",
+    "model": {
+        "Cosmos-Reason2-8B": {
+            "class": "Cosmos",
+            "model_path": "nvidia/Cosmos-Reason2-8B",
+            "tensor_parallel_size": 1,
+            "max_model_len": 32768,
+            "gpu_memory_utilization": 0.90,
+            "enable_thinking": true,
+            "temperature": 0.6,
+            "top_p": 0.95,
+            "repetition_penalty": 1.05,
+            "max_new_tokens": 4096
+        }
+    },
+    "data": {
+        "VANTAGE_VQA_8frame": {},
+        "VANTAGE_EventVerification_8frame": {},
+        "VANTAGE_Temporal_8frame": {},
+        "VANTAGE_DVC_8frame": {},
+        "VANTAGE_SOT": {},
+        "VANTAGE_2DGrounding": {
+            "class": "VANTAGE_2DGroundingDataset",
+            "dataset": "VANTAGE_2DGrounding"
+        },
+        "VANTAGE_2DPointing": {
+            "class": "VANTAGE_2DPointing",
+            "dataset": "VANTAGE_2DPointing"
+        },
+        "Astro2D": {
+            "class": "Astro2DDetectionDataset",
+            "dataset": "Astro2D"
+        }
+    }
+}

@@ -197,6 +197,10 @@ You can launch the evaluation by setting either --data and --model or --config.
     parser.add_argument(
         '--use-vllm', action='store_true', help='use vllm to generate, the flag is only supported in Llama4 for now')
     parser.add_argument('--use-verifier', action='store_true', help='use verifier to evaluate')
+    parser.add_argument(
+        '--lmudata-root', type=str, default=None,
+        help='Set/override the LMUData root. Datasets are expected under '
+             '<LMUData root>/datasets/<dataset_name>. Overrides the LMUData environment variable.')
 
     args = parser.parse_args()
     return args
@@ -205,6 +209,14 @@ You can launch the evaluation by setting either --data and --model or --config.
 def main():
     logger = get_logger('RUN')
     args = parse_args()
+    # Set the LMUData root before any dataset is constructed; the CLI flag wins
+    # over any pre-existing LMUData environment variable.
+    if args.lmudata_root is not None:
+        root = osp.abspath(osp.expanduser(args.lmudata_root))
+        if not osp.isdir(root):
+            raise FileNotFoundError(f'--lmudata-root path does not exist: {root}')
+        os.environ['LMUData'] = root
+        logger.info(f'LMUData root set to {root} via --lmudata-root')
     # Allow positional config: python run.py config.json
     if args.config_pos is not None and args.config is None:
         args.config = args.config_pos

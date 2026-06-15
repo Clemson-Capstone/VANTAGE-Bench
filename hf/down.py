@@ -1,34 +1,45 @@
+"""
+Dataset download helper — for most users, use run_lmudata.py instead.
+
+    python scripts/run_lmudata.py --all --lmu-root ~/LMUData
+
+This script is kept as a low-level alternative for downloading individual
+archive files from a private/internal HuggingFace dataset repo using the
+snapshot_download API. It is not needed for the public benchmark workflow.
+
+Usage (internal / advanced only):
+  1. Set HF_REPO to your dataset repo id.
+  2. Set LOCAL_DIR to the target local directory.
+  3. Edit TARGET_PATTERNS to match the files you want to pull.
+  4. Run: python hf/down.py
+"""
+
 from huggingface_hub import snapshot_download
 import time
 
-# List your tasks individually
-# target_tasks = [
-#     "2dbbox/*",
-#     "Dense Video Caption/*",
-#     "Spatial/*",
-#     "Temporal/*",
-#     "VQA/*",
-#     "event_verification_subset/*"
-# ]
-target_tasks = ["<dataset_archive>.tar.gz"]
+HF_REPO = "nvidia/PhysicalAI-VANTAGE-Bench"
+LOCAL_DIR = "~/LMUData"
 
-for pattern in target_tasks:
-    print(f"--- Starting Sync for: {pattern} ---")
+# Restrict to specific files/folders; use ["*"] to pull everything.
+TARGET_PATTERNS = ["*"]
+
+for pattern in TARGET_PATTERNS:
+    print(f"--- Syncing: {pattern} ---")
     try:
         snapshot_download(
-            repo_id="<your-hf-org>/<your-dataset-repo>",
+            repo_id=HF_REPO,
             repo_type="dataset",
-            local_dir="<local_data_dir>",
+            local_dir=LOCAL_DIR,
             local_dir_use_symlinks=False,
-            allow_patterns=[pattern], # One pattern at a time
-            max_workers=2,            # Slow and steady to avoid 429
-            resume_download=True,     # Essential for resuming
-            force_download=False      # MUST be False to avoid re-checking everything
+            allow_patterns=[pattern],
+            max_workers=2,
+            resume_download=True,
+            force_download=False,
         )
-        print(f"Finished {pattern}. Waiting 10s to clear API limits...")
-        time.sleep(20) # Cooling off period for the HF API
+        print(f"Finished {pattern}. Waiting 10s ...")
+        time.sleep(10)
     except Exception as e:
         print(f"Error on {pattern}: {e}")
         continue
 
-print("All targeted folders synced.")
+print("Done.")

@@ -64,7 +64,11 @@ class VANTAGE_VQA(VideoBaseDataset):
     MD5 = ''
     TYPE = 'VANTAGE-VQA'
 
-    QUESTION_PREFIX = "You are analyzing a surveillance or traffic monitoring video. Watch the video carefully before answering. Answer based only on what you observe in the video."
+    QUESTION_PREFIX = (
+        "You are provided with a sequence of video frames depicting a scene\n"
+        "Begin with a concise overview of what's happening; keep items conceptual, not implementation-level\n"
+        "Answer the question based only on the visual content of the image."
+    )
 
     def __init__(self, dataset='VANTAGE_VQA', pack=False, nframe=0, fps=-1, total_pixels=None,
                  max_pixels=None, max_frames=None, test_mode=False, limit=None, verbose=False,
@@ -179,15 +183,14 @@ class VANTAGE_VQA(VideoBaseDataset):
             else:
                 raise FileNotFoundError(
                     f"VANTAGE_VQA data not found under {local_dir}. "
-                    "Place VANTAGE_VQA.tsv and videos/ under LMUDataRoot()/datasets/VANTAGE_VQA/, "
-                    "or place annotation JSONs under annotations/ and videos under videos/ to auto-generate the TSV."
+                    "Run: python scripts/run_lmudata.py --task vqa --lmu-root ~/LMUData"
                 )
 
         data_file = osp.join(dataset_path, f'{dataset_name}.tsv')
         if not osp.exists(data_file):
             raise FileNotFoundError(
                 f"VANTAGE_VQA TSV not found: {data_file}. "
-                "Place VANTAGE_VQA.tsv under LMUDataRoot()/datasets/VANTAGE_VQA/."
+                "Run: python scripts/run_lmudata.py --task vqa --lmu-root ~/LMUData"
             )
         mapping_dir = osp.join(dataset_path, 'mappings')
         if osp.exists(mapping_dir):
@@ -304,7 +307,8 @@ class VANTAGE_VQA(VideoBaseDataset):
 
     def generate_question(self, base_question: str, options: list, task_type: str = '') -> str:
         option_labels = ["A", "B", "C", "D"]
-        prefix = "Question: " + base_question + "\n"
+        prefix = self.QUESTION_PREFIX + "\n"
+        prefix += "Question: " + base_question + "\n"
         prefix += "Select your answer from the choices below:\n"
         for i, c in enumerate(option_labels[:len(options)]):
             prefix += c + ". " + str(options[i]) + "\n"
@@ -392,7 +396,8 @@ class VANTAGE_VQA(VideoBaseDataset):
         if not options or base_question is None:
             return raw_question, base_question or raw_question, [], raw_question
 
-        prompt = 'Question: ' + base_question + '\n'
+        prompt = self.QUESTION_PREFIX + '\n'
+        prompt += 'Question: ' + base_question + '\n'
         prompt += 'Select your answer from the choices below:\n'
         for i, c in enumerate(option_labels[:len(options)]):
             prompt += c + '. ' + str(options[i]) + '\n'
@@ -449,6 +454,16 @@ class VANTAGE_VQA(VideoBaseDataset):
             'data file should be an supported format (xlsx/json/tsv) file'
 
         data = load(eval_file)
+
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, osp.splitext(osp.basename(eval_file))[0], submission_path, task='vqa')
+        print(f"Submission written to: {submission_path}")
+
+        if 'answer' not in self.data.columns:
+            return {}
+
         verbose = judge_kwargs.get('verbose', False) or self.verbose
         results = {}
         category_stats = defaultdict(lambda: {"correct": 0, "total": 0})
@@ -502,10 +517,8 @@ class VANTAGE_VQA(VideoBaseDataset):
         overall_total = results['Overall']['total']
 
         results_file = get_intermediate_file_path(eval_file, '_results', 'csv')
-        acc_file = get_intermediate_file_path(eval_file, '_acc', 'csv')
         pd.DataFrame(results).to_csv(results_file, index=True)
-        acc_summary = {'Overall': overall_acc}
-        return acc_summary
+        return {'accuracy': overall_acc}
 
 
 def main():

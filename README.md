@@ -1,30 +1,171 @@
-# VANTAGE Benchmark Suite
+# VANTAGE-Bench
 
-**VANTAGE** is a benchmark suite for evaluating large vision-language models (VLMs) on real-world video and image understanding tasks — spanning multiple-choice QA, temporal localization, dense captioning, event verification, single-object tracking, 2D detection, and referring expression grounding.
+**VANTAGE-Bench** is a multi-task benchmark for evaluating Vision-Language Models on fixed-camera footage captured in operational environments — spanning warehouse, transportation, and smart-spaces deployments.
 
-This repository is a fork of [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), an open-source VLM evaluation toolkit. VANTAGE adds new benchmark tasks, dataset loaders, and evaluation metrics on top of that foundation.
+This repository is a fork of [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), an open-source VLM evaluation toolkit. VANTAGE-Bench adds new benchmark tasks, dataset loaders, and evaluation metrics on top of that foundation.
+
+**[[Website]](https://vantage-bench.org)  [[Leaderboard]](https://huggingface.co/spaces/clemson-computing/VANTAGE-Bench-Leaderboard)  [[Dataset]](https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench)  [[Submit]](https://vantage-bench.org/submit)**
 
 ---
 
 ## Contents
 
+- [About VANTAGE-Bench](#about-vantage-bench)
+- [Quick Start](#quick-start)
+- [End-to-End Flow](#end-to-end-flow)
 - [Benchmarks](#benchmarks)
 - [Installation](#installation)
 - [Dataset Setup](#dataset-setup)
 - [Running Evaluations](#running-evaluations)
+- [Submission Workflow](#submission-workflow)
 - [Model Backends](#model-backends)
 - [Output Structure](#output-structure)
 - [Prediction File Schemas](#prediction-file-schemas)
 - [Hardware Requirements](#hardware-requirements)
 - [Repository Layout](#repository-layout)
+- [Documentation Index](#documentation-index)
 - [Built on VLMEvalKit](#built-on-vlmevalkit)
 - [Citation](#citation)
 
 ---
 
+## About VANTAGE-Bench
+
+VANTAGE-Bench is a multi-task benchmark for Real-World Video Understanding, designed to evaluate Vision-Language Models on fixed-camera footage captured in operational environments.
+
+The benchmark spans three deployment domains: **Warehouse**, **Transportation**, and **Smart Spaces**, and evaluates model capability across four complementary pillars of video intelligence.
+
+Unlike benchmarks built around curated internet media or short trimmed clips, VANTAGE-Bench emphasizes the perceptual and reasoning capabilities required for real-world Infrastructure AI systems — including localization, tracking, temporal reasoning, and grounded understanding of events.
+
+### Benchmark Structure
+
+| Pillar | Description | Tasks |
+|--------|-------------|-------|
+| **Spatial** | 2D scene understanding | 2D Object Localization, 2D Referring Expressions, 2D Pointing |
+| **Spatio-Temporal** | Tracking and spatial reasoning over time | Single Object Tracking |
+| **Temporal** | Event timing and temporal reasoning | Temporal Localization, Dense Video Captioning |
+| **Semantic** | High-level video understanding | Event Verification, Video Question Answering |
+
+### Tasks and Primary Metrics
+
+| Pillar | Task | Primary Metric |
+|--------|------|----------------|
+| Spatial | 2D Object Localization | F1@0.5 |
+| Spatial | 2D Referring Expressions | mIoU |
+| Spatial | 2D Pointing | Accuracy |
+| Spatio-Temporal | Single Object Tracking | AUC |
+| Temporal | Temporal Localization | mIoU |
+| Temporal | Dense Video Captioning | SODA_c |
+| Semantic | Event Verification | Macro F1 |
+| Semantic | Video Question Answering | Accuracy |
+
+---
+
+## Quick Start
+
+```bash
+# 1. Clone and install (Python 3.10+ required)
+git clone https://github.com/Clemson-Capstone/VANTAGE-Bench.git
+cd VANTAGE-Bench
+conda create -n vantage python=3.10 -y && conda activate vantage
+conda install -c conda-forge ffmpeg -y          # required for VANTAGE-SOT
+pip install -r requirements.txt && pip install -e .
+
+# 2. Download benchmark data from HuggingFace
+hf auth login                                   # once — needed for SOT data
+python scripts/run_lmudata.py --all --lmu-root ~/LMUData
+
+# 3. Run inference + evaluation (produces predictions and submission files)
+export LMUData=~/LMUData
+export OPENAI_API_KEY=<your-key>                # if using an API model
+python run.py \
+  --data VANTAGE_VQA_8frame \
+  --model GPT4o \
+  --work-dir ./outputs
+
+# 4. Package and submit
+python scripts/package_submission.py --work-dir ./outputs/<model>/<eval_id> --out submission.tar.gz
+# Upload submission.tar.gz at https://vantage-bench.org/submit
+```
+
+> **Data prep guide:** [`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md) covers all tasks, options, troubleshooting, and the SOT/grounding prerequisites.
+>
+> **Prompt formats:** [`prompt_guide.md`](prompt_guide.md) documents the exact prompt templates used for each benchmark.
+
+---
+
+## End-to-End Flow
+
+This section traces exactly what happens from a fresh clone to a submitted result.
+
+### Participant flow
+
+```
+git clone / pip install
+        │
+        ▼
+scripts/run_lmudata.py                 downloads nvidia/PhysicalAI-VANTAGE-Bench from HF
+        │                              reshapes into LMUData/datasets/<Task>/ layout
+        │                              (symlinks media into ~/.cache/huggingface/)
+        ▼
+export LMUData=~/LMUData
+        │
+        ▼
+python run.py                          builds dataset object → calls dataset.prepare_dataset()
+        │                              loads TSV from LMUData/datasets/<Task>/<Task>.tsv
+        │                              for each row: calls dataset.build_prompt()
+        │                                 → packages video/image paths + question text
+        │                              feeds prompt to model → gets raw prediction string
+        │                              writes predictions to outputs/<model>/<eval_id>/<model>_<task>.xlsx
+        │
+        ▼
+dataset.evaluate(result_file)          called at end of run.py (skipped in --mode infer)
+        │                              calls emit_submission() in vlmeval/dataset/utils/vantagebench/
+        │                              writes outputs/<model>/<eval_id>/<model>_<task>_submission.jsonl
+        │                              (no local leaderboard metrics — GT is withheld from public dataset)
+        ▼
+scripts/package_submission.py          collects all *_submission.jsonl files from the output dir
+        │                              renames them to canonical task names (vqa.jsonl, temporal.jsonl, …)
+        │                              bundles into submission.tar.gz
+        ▼
+upload submission.tar.gz               to https://vantage-bench.org/submit
+                                       scores emailed back; 2 submissions/day · 30 lifetime
+```
+
+### Organizer / leaderboard pipeline
+
+```
+outputs/<model>/<eval_id>/
+        │
+        ▼  parser/get_all_outputs.py
+vlmevalkit_outputs.json                one JSON keyed by model, task → metric values
+        │
+        ▼  parser/prepare_outputs_hf.py
+hf/leaderboard.json                    leaderboard schema with overall scores and task breakdowns
+        │
+        ▼  hf/up.py
+HF Space (hf/app.py)                   Gradio leaderboard UI at
+                                        https://huggingface.co/spaces/clemson-computing/VANTAGE-Bench-Leaderboard
+```
+
+### Key code paths per task
+
+| Task | Dataset class | Prompt built in | Evaluator / emitter |
+|------|--------------|-----------------|---------------------|
+| VQA | `vantage_vqa.py` → `VANTAGE_VQA` | `build_prompt()` | `evaluate()` → `adapter_vqa.py` |
+| Temporal | `vantage_temporal.py` → `VANTAGE_Temporal` | `build_prompt()` | `evaluate()` → `adapter_temporal.py` |
+| DVC | `vantage_dvc.py` → `VANTAGE_DVC` | `build_prompt()` | `evaluate()` → `adapter_dvc.py` |
+| EventVerification | `vantage_event_verification.py` → `VANTAGE_EventVerification` | `build_prompt()` | `evaluate()` → `adapter_event_verification.py` |
+| SOT | `vantage_sot.py` → `VANTAGE_SOT` | `build_prompt()` | `evaluate()` → `adapter_sot.py` |
+| 2DGrounding | `vantage2d/grounding_2d_dataset.py` | `build_prompt()` | `evaluate()` → `adapter_grounding.py` |
+| 2DPointing | `vantage2d/pointing_dataset.py` | inherited MCQ | `evaluate()` → `adapter_pointing.py` |
+| Astro2D | `vantage2d/astro_2d_dataset.py` | `build_prompt()` | `evaluate()` → `adapter_astro.py` |
+
+---
+
 ## Benchmarks
 
-VANTAGE covers nine tasks across video and image modalities. Each benchmark is independently runnable.
+VANTAGE covers eight tasks across video and image modalities. Each benchmark is independently runnable.
 
 ### Video Benchmarks
 
@@ -32,7 +173,7 @@ VANTAGE covers nine tasks across video and image modalities. Each benchmark is i
 |-----------|------|-----------------|----------------------|
 | **VANTAGE-VQA** | Multiple-choice video question answering | Accuracy | `VANTAGE_VQA_8frame` |
 | **VANTAGE-Temporal** | Temporal event localization | mIoU, Precision@0.5 | `VANTAGE_Temporal_8frame` |
-| **VANTAGE-DVC** | Dense video captioning | SODA-c, CIDEr, METEOR, IoU | `VANTAGE_DVC_8frame` |
+| **VANTAGE-DVC** | Dense video captioning | SODA-c, mIoU, IoU-F1, BERTScore-F1 | `VANTAGE_DVC_8frame` |
 | **VANTAGE-EventVerification** | Binary event physics verification (Yes/No) | Macro F1, Accuracy, Balanced Accuracy | `VANTAGE_EventVerification_8frame` |
 | **VANTAGE-SOT** | Single-object tracking across frames | Success AUC, Mean IoU, Precision@0.5 | `VANTAGE_SOT` |
 
@@ -40,7 +181,6 @@ VANTAGE covers nine tasks across video and image modalities. Each benchmark is i
 
 | Benchmark | Task | Primary Metrics | Dataset key |
 |-----------|------|-----------------|-------------|
-| **VANTAGE-2DDetection** | Object detection (KITTI format) | mAP, AP50 | `VANTAGE_2DDetection` |
 | **VANTAGE-2DGrounding** | Referring expression grounding | Acc@0.5, Acc@0.25, Mean IoU | `VANTAGE_2DGrounding` |
 | **VANTAGE-2DPointing** | Spatial pointing (multiple-choice) | Accuracy | `VANTAGE_2DPointing` |
 | **Astro2D** | Person detection on aerial imagery | mAP, AP50 | `Astro2D` |
@@ -52,9 +192,12 @@ All dataset keys and their frame/fps variants are listed in [All Registered Data
 ## Installation
 
 ```bash
-# Python 3.10+ recommended
+# Python 3.10 or later required
 conda create -n vantage python=3.10 -y
 conda activate vantage
+
+# ffmpeg is required for VANTAGE-SOT frame extraction
+conda install -c conda-forge ffmpeg -y
 
 # Install dependencies
 pip install -r requirements.txt
@@ -68,18 +211,44 @@ pip install vllm
 
 ## Dataset Setup
 
+### Download from HuggingFace (recommended)
+
+The benchmark data is hosted at [`nvidia/PhysicalAI-VANTAGE-Bench`](https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench). Use the provided prep script to download and reshape it into the layout VLMEvalKit expects:
+
+```bash
+# Prepare all eight tasks (symlink mode — disk-efficient)
+hf auth login                    # one-time setup; required for SOT data
+python scripts/run_lmudata.py --all --lmu-root ~/LMUData
+```
+
+To skip the large SOT download (~16 GB), prepare individual tasks:
+
+```bash
+python scripts/run_lmudata.py \
+  --tasks vqa,event_verification,dvc,temporal,pointing,astro2d,grounding \
+  --lmu-root ~/LMUData
+```
+
+Full documentation, prerequisites (ffmpeg, gdown), troubleshooting, and advanced options are in **[`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md)**.
+
 ### Local layout
 
-Each dataset is resolved from a local directory first. Place data under `$LMUDataRoot/datasets/<DatasetName>/`:
+After running the prep script, or if you place data manually, VLMEvalKit looks for data under `$LMUData/datasets/<DatasetName>/`. Override the root with:
+
+```bash
+export LMUData=/path/to/your/data
+# or pass it directly:
+python run.py --lmudata-root /path/to/your/data ...
+```
+
+Expected layout:
 
 ```
-$LMUDataRoot/                          # default: ~/LMUData
+$LMUData/                                      # default: ~/LMUData
 └── datasets/
     ├── VANTAGE_VQA/
-    │   ├── VANTAGE_VQA.tsv            # annotation file (index, video, question, answer, ...)
+    │   ├── VANTAGE_VQA.tsv
     │   └── videos/
-    │       ├── <video_id>.mp4
-    │       └── ...
     ├── VANTAGE_Temporal/
     │   ├── VANTAGE_Temporal.tsv
     │   └── videos/
@@ -91,38 +260,29 @@ $LMUDataRoot/                          # default: ~/LMUData
     │   └── videos/
     ├── VANTAGE_SOT/
     │   └── <seq_name>/                # one directory per sequence: gt.json + frames/
-    ├── VANTAGE_2DDetection/
-    │   ├── images/
-    │   └── labels/                    # KITTI-format label files
     ├── VANTAGE_2DGrounding/
     │   ├── images/
-    │   └── annotations/
+    │   └── annotations.json
     ├── VANTAGE_2DPointing/
     │   ├── VANTAGE_2DPointing.tsv
-    │   └── images/
+    │   └── images_annotated/
     └── Astro2D/
         ├── images/
         └── labels/
 ```
 
-Override the root directory with the environment variable:
+### S3 fallback (internal use only)
 
-```bash
-export LMUDataRoot=/path/to/your/data
-```
-
-### S3 download (optional)
-
-For datasets hosted on S3-compatible storage, set:
+For environments with access to private S3-compatible storage, the dataset classes can fall back to downloading from S3 if the local directory is absent. Set these variables before running:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VANTAGE_S3_PROFILE` | `default` | AWS credentials profile in `~/.aws/credentials` |
 | `VANTAGE_S3_REGION` | — | AWS region override |
-| `VANTAGE_S3_ENDPOINT_URL` | — | S3-compatible endpoint (omit for standard AWS S3) |
+| `VANTAGE_S3_ENDPOINT_URL` | — | S3-compatible endpoint |
 | `VANTAGE_S3_DOWNLOAD_WORKERS` | `8` | Parallel download threads |
 
-When S3 is configured, the dataset classes fall back to downloading from S3 automatically if the local directory is absent or incomplete.
+> **Note:** The S3 bucket is not publicly accessible. External users should use the HuggingFace download path above.
 
 ---
 
@@ -164,6 +324,7 @@ python run.py \
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--work-dir <path>` | `./outputs` | Directory for all output files |
+| `--lmudata-root <path>` | `$LMUData` or `~/LMUData` | Override the dataset root directory |
 | `--reuse` | off | Reuse an existing prediction file; skip inference |
 | `--mode infer` | `all` | Inference only |
 | `--mode eval` | `all` | Evaluation only (requires existing prediction file) |
@@ -184,6 +345,7 @@ Pass any of these strings as the `--data` argument.
 | `VANTAGE_VQA_8frame` | 8 frames uniformly sampled |
 | `VANTAGE_VQA_16frame` | 16 frames |
 | `VANTAGE_VQA_64frame` | 64 frames |
+| `VANTAGE_VQA_4fps` | 4 frames per second |
 | `VANTAGE_VQA_1fps` | 1 frame per second |
 | `VANTAGE_VQA_0.5fps` | 0.5 fps |
 | `VANTAGE_VQA_8frame_200` | 8 frames, 200-sample subset (seed 42) |
@@ -197,6 +359,7 @@ Pass any of these strings as the `--data` argument.
 | `VANTAGE_Temporal_64frame` | 64 frames |
 | `VANTAGE_Temporal_1fps` | 1 fps |
 | `VANTAGE_Temporal_0.5fps` | 0.5 fps |
+| `VANTAGE_Temporal_10fps` | 10 fps |
 
 ### VANTAGE-DVC
 
@@ -215,6 +378,7 @@ Pass any of these strings as the `--data` argument.
 | `VANTAGE_EventVerification_8frame` | 8 frames |
 | `VANTAGE_EventVerification_16frame` | 16 frames |
 | `VANTAGE_EventVerification_1fps` | 1 fps |
+| `VANTAGE_EventVerification_4fps` | 4 fps |
 
 > **Note:** The EventVerification class defaults to `fps=4`. All registered variants override this with `fps=0` when using frame-count-based sampling. If you instantiate the class directly, pass `fps=0` alongside `nframe` to avoid unexpected behavior.
 
@@ -225,19 +389,67 @@ Pass any of these strings as the `--data` argument.
 | `VANTAGE_SOT` | Default: 8 frames, stride 15 |
 | `VANTAGE_SOT_16f` | 16 frames |
 | `VANTAGE_SOT_32f` | 32 frames |
-| `VANTAGE_SOT_tiny` | Small validation subset |
 
 ### Image benchmarks
 
-Image benchmarks are registered via their `supported_datasets()` class methods and the `IMAGE_DATASET` list in `vlmeval/dataset/__init__.py`. The following names are available:
+| Key | Class | Task | Submit? |
+|-----|-------|------|---------|
+| `VANTAGE_2DGrounding` | `VANTAGE_2DGroundingDataset` | Referring expression grounding | ✓ |
+| `VANTAGE_2DPointing` | `VANTAGE_2DPointing` | Spatial pointing MCQ | ✓ |
+| `Astro2D` | `Astro2DDetectionDataset` | Person detection, aerial imagery | ✓ |
+| `VANTAGE_2DGrounding_val` | `VANTAGE_2DGroundingDataset` | Grounding — validation split | dev only |
+| `VANTAGE_2DGrounding_small` | `VANTAGE_2DGroundingDataset` | Grounding — small debug subset | dev only |
 
-| Key | Class | Task |
-|-----|-------|------|
-| `VANTAGE_2DDetection` | `VANTAGE_2DDetectionDataset` | Object detection (KITTI format) |
-| `VANTAGE_2DGrounding` | `VANTAGE_2DGroundingDataset` | Referring expression grounding |
-| `VANTAGE_2DGrounding_val` | `VANTAGE_2DGroundingDataset` | Grounding (validation split) |
-| `VANTAGE_2DPointing` | `VANTAGE_2DPointing` | Spatial pointing MCQ |
-| `Astro2D` | `Astro2DDetectionDataset` | Person detection, aerial imagery |
+---
+
+## Submission Workflow
+
+Submit at: **https://vantage-bench.org/submit** — Limits: 2 per day · 30 lifetime per email.
+
+> **Ground truth is withheld from the public dataset.** Scoring is server-side; you cannot compute leaderboard metrics locally.
+
+### Pillars
+
+VANTAGE-Bench is organized into four pillars. **You must submit all tasks within a pillar** — partial-pillar submissions are rejected. Submit any combination of complete pillars.
+
+| Pillar | Name | Tasks | Primary metric |
+|--------|------|-------|----------------|
+| **I** | Semantic | Event Verification, Video QA | Macro F1, Accuracy |
+| **II** | Spatial | Referring Expressions, Spatial Pointing, Object Localization (Astro2D) | mIoU, Accuracy, F1@0.5 |
+| **III** | Temporal | Temporal Localization, Dense Video Captioning | mIoU, SODAc |
+| **IV** | Spatio-Temporal | Single Object Tracking | Success AUC |
+
+### Step 1 — Run inference + evaluation
+
+Submission JSONL files are written during the **evaluation phase**, not inference-only. Use the default mode (`--mode all`) to run both in one step:
+
+```bash
+python run.py \
+  --data VANTAGE_VQA_8frame VANTAGE_EventVerification_8frame \
+         VANTAGE_Temporal_8frame VANTAGE_DVC_8frame VANTAGE_SOT \
+         VANTAGE_2DGrounding VANTAGE_2DPointing Astro2D \
+  --model <YourModel> --work-dir ./outputs
+```
+
+Each task produces a `*_submission.jsonl` alongside its prediction xlsx. If you already ran inference with `--mode infer`, add `--mode eval --reuse` instead of re-running inference.
+
+### Step 2 — Package into a `.tar.gz`
+
+The portal requires **one `.tar.gz` containing one `.jsonl` per task**:
+
+```bash
+python scripts/package_submission.py \
+  --work-dir ./outputs/<model>/<eval_id> \
+  --out submission.tar.gz
+```
+
+The script collects submission files, renames them to canonical task names (`vqa.jsonl`, `temporal.jsonl`, …), prints pillar coverage, and writes the archive.
+
+### Step 3 — Upload
+
+Go to **https://vantage-bench.org/submit**, complete the form (identity, model config, inference setup, pillars), and upload `submission.tar.gz` (max 500 MB). Scores arrive by email.
+
+Quick reference: [`SUBMISSION.md`](SUBMISSION.md) · Full details and JSONL format: [`docs/vantage/SUBMISSION.md`](docs/vantage/SUBMISSION.md).
 
 ---
 
@@ -302,20 +514,25 @@ python -c "from vlmeval.config import supported_VLM; print(list(supported_VLM.ke
 
 ## Output Structure
 
+`<eval_id>` is a run stamp in the format `T<YYYYMMDD>_G<8-char-git-hash>` (e.g. `T20250614_Gabc12345`). Symlinks to the latest run's files appear directly under `<model_name>/`.
+
 ```
 ./outputs/
 └── <model_name>/
-    └── <eval_id>/
-        ├── <model>_VANTAGE_VQA_8frame.xlsx             # raw predictions
-        ├── <model>_VANTAGE_VQA_8frame_acc.csv          # per-sample accuracy
+    ├── <model>_VANTAGE_VQA_8frame.xlsx              ← symlink to latest run
+    ├── <model>_VANTAGE_VQA_8frame_submission.jsonl  ← symlink to latest run
+    └── T<YYYYMMDD>_G<hash>/                         ← timestamped run folder
+        ├── <model>_VANTAGE_VQA_8frame.xlsx              # raw predictions
+        ├── <model>_VANTAGE_VQA_8frame_submission.jsonl  # bundle this for upload
         ├── <model>_VANTAGE_Temporal_8frame.xlsx
-        ├── <model>_VANTAGE_Temporal_8frame_metrics.json
+        ├── <model>_VANTAGE_Temporal_8frame_submission.jsonl
         ├── <model>_VANTAGE_DVC_8frame.xlsx
-        ├── <model>_VANTAGE_DVC_8frame_metrics.json
-        ├── <model>_VANTAGE_EventVerification_8frame.xlsx
-        ├── <model>_VANTAGE_EventVerification_8frame_acc.json
-        └── <model>_VANTAGE_SOT.xlsx
+        ├── <model>_VANTAGE_DVC_8frame_submission.jsonl
+        ├── model_config.txt                             # model __dict__ dump
+        └── VANTAGE_VQA_8frame_config.json               # dataset config dump
 ```
+
+> **Note:** VANTAGE public tasks do **not** produce local metric files (`_acc.csv`, `_metrics.json`) because ground truth is withheld from the public dataset. The `*_submission.jsonl` files are what you package and upload for server-side scoring.
 
 Override the output root with `--work-dir` or the `MMEVAL_ROOT` environment variable.
 
@@ -332,12 +549,13 @@ Ground truth is always resolved from the dataset TSV at evaluation time. Predict
 | VANTAGE-DVC | `index`, `prediction` | GT events resolved by `index` |
 | VANTAGE-EventVerification | `prediction` + one of: `index`, `id`, or `video` | GT resolved in that priority order |
 | VANTAGE-SOT | `index`, `prediction` | GT track metadata from SOT cache |
-| Astro2D | `image_path`, `prediction` | GT loaded from KITTI label files on disk |
 | VANTAGE-2DGrounding | `index`, `prediction` | GT boxes resolved by `index` |
+| VANTAGE-2DPointing | `index`, `prediction` | GT answer resolved from dataset TSV by `index` |
+| Astro2D | `image_path`, `prediction` | GT loaded from KITTI label files on disk |
 
 The `prediction` column should contain the raw model output string. Evaluators apply task-specific parsers (answer letter extraction, JSON span parsing, bbox parsing) internally.
 
-Full schema details: [docs/en/VANTAGEEvalInputs.md](docs/en/VANTAGEEvalInputs.md).
+Full schema details: [docs/vantage/VANTAGEEvalInputs.md](docs/vantage/VANTAGEEvalInputs.md).
 
 ---
 
@@ -352,24 +570,30 @@ Requirements vary by model size and backend.
 | Medium VLM local inference (7B–13B, vLLM) | 24 GB VRAM (1× GPU) |
 | Large VLM local inference (30B+, vLLM) | 2–4× 40 GB VRAM |
 
-Video benchmarks (VANTAGE-Temporal, VANTAGE-DVC, VANTAGE-SOT) load up to 256 frames per video when using fps-based sampling. Memory usage scales with the number of frames and frame resolution. Use `max_frames` and `total_pixels` parameters to limit memory consumption.
-
-```bash
-# Example: limit frame count and pixel budget for a memory-constrained setup
-python run.py \
-  --data VANTAGE_Temporal_8frame \
-  --model <ModelName> \
-  --verbose
-```
-
-For custom limits, use a config file with explicit `nframe`, `max_frames`, and `total_pixels` parameters.
+Video benchmarks (VANTAGE-Temporal, VANTAGE-DVC, VANTAGE-SOT) load up to 256 frames per video when using fps-based sampling. Memory usage scales with the number of frames and frame resolution. Use `max_frames` and `total_pixels` parameters to limit memory consumption — pass them via a config file with explicit `nframe`, `max_frames`, and `total_pixels` values.
 
 ---
 
 ## Repository Layout
 
 ```
+run.py                                  # main entry point
+SUBMISSION.md                           # quick submission reference
+README_VANTAGE.md                       # extended reference (config files, edge cases)
+prompt_guide.md                         # prompt templates for each task
+
+scripts/
+├── run_lmudata.py                      # data download + prep
+├── package_submission.py               # bundles *_submission.jsonl → .tar.gz
+└── RUN_LMUData.md                      # data prep guide
+
+docs/vantage/
+├── SUBMISSION.md                       # full submission guide (JSONL format, IDs)
+├── DEVELOPER_GUIDE.md                  # file map, all flags, model registration
+└── VANTAGEEvalInputs.md                # prediction file schema reference
+
 vlmeval/
+├── config.py                           # supported_VLM dict (model name → class)
 ├── dataset/
 │   ├── vantage_vqa.py                  # VANTAGE-VQA
 │   ├── vantage_temporal.py             # VANTAGE-Temporal
@@ -377,23 +601,34 @@ vlmeval/
 │   ├── vantage_event_verification.py   # VANTAGE-EventVerification
 │   ├── vantage_sot.py                  # VANTAGE-SOT
 │   ├── vantage2d/
-│   │   ├── detection_2d_dataset.py     # VANTAGE-2DDetection
 │   │   ├── grounding_2d_dataset.py     # VANTAGE-2DGrounding
 │   │   ├── astro_2d_dataset.py         # Astro2D
-│   │   ├── datasets.yaml               # per-dataset path config
+│   │   ├── pointing_dataset.py         # VANTAGE-2DPointing
+│   │   ├── datasets.yaml               # per-dataset path config (image tasks)
 │   │   └── utils.py                    # shared bbox / AP helpers
+│   ├── utils/vantagebench/             # submission emitter, adapters, ID rules
 │   ├── __init__.py                     # dataset registration
 │   └── video_dataset_config.py         # video variant registrations
 ├── vlm/
-│   └── <model>.py                       # local vLLM wrapper for models
-├── api/
-│   └── <model>.py                # API wrapper for OpenAI-compatible endpoints
-└── config.py                           # supported_VLM dict (model name → class)
-
-run.py                                  # main entry point
-README_VANTAGE.md                       # extended reference (config files, edge cases)
-docs/en/VANTAGEEvalInputs.md           # prediction file schema reference
+│   └── <model>.py                      # local model wrappers (HuggingFace / vLLM)
+└── api/
+    └── <model>.py                      # API wrappers (OpenAI-compatible)
 ```
+
+---
+
+## Documentation Index
+
+| Document | What it covers |
+|----------|---------------|
+| [`SUBMISSION.md`](SUBMISSION.md) | Quick submission reference: 3-step flow, pillar table, packaging, form fields |
+| [`docs/vantage/SUBMISSION.md`](docs/vantage/SUBMISSION.md) | Full submission guide: JSONL record format, canonical IDs, troubleshooting |
+| [`docs/vantage/DEVELOPER_GUIDE.md`](docs/vantage/DEVELOPER_GUIDE.md) | File-to-file map, all CLI flags, all env vars, model registration paths |
+| [`configs/README.md`](configs/README.md) | Sample config files for every supported model; GPU/package requirements table |
+| [`docs/vantage/VANTAGEEvalInputs.md`](docs/vantage/VANTAGEEvalInputs.md) | Minimum prediction-file columns required by each evaluator |
+| [`README_VANTAGE.md`](README_VANTAGE.md) | Extended reference: config files, per-model parameter passing, all dataset keys |
+| [`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md) | Data download guide: prerequisites, per-task flags, troubleshooting |
+| [`prompt_guide.md`](prompt_guide.md) | Exact prompt templates used for each benchmark task |
 
 ---
 
@@ -409,7 +644,19 @@ To add a new model or benchmark to this repository, follow the VLMEvalKit contri
 
 ## Citation
 
-If you use VANTAGE in your research, please cite this work. If you use the VLMEvalKit infrastructure, please also cite the VLMEvalKit paper.
+If you use VANTAGE-Bench in your research, please cite:
+
+```bibtex
+@misc{vantagebench2026,
+  title        = {VANTAGE-Bench: A Benchmark for Vision-Language Models on Fixed-Camera Infrastructure AI},
+  author       = {{VANTAGE-Bench Team}},
+  year         = {2026},
+  howpublished = {\url{https://github.com/Clemson-Capstone/VANTAGE-Bench}},
+  note         = {Benchmark, dataset, evaluation framework, and public leaderboard. Leaderboard: https://huggingface.co/spaces/clemson-computing/VANTAGE-Bench-Leaderboard}
+}
+```
+
+If you use the VLMEvalKit infrastructure, please also cite:
 
 ```bibtex
 @inproceedings{duan2024vlmevalkit,

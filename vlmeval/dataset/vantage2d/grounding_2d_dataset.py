@@ -1,6 +1,6 @@
 """2D Grounding Dataset for images in RefCOCO or JSONL format.
 
-Following the structure of detection_2d_dataset.py, this dataset evaluates
+This dataset evaluates
 2D visual grounding using Accuracy@IoU metrics.
 
 Supported annotation formats:
@@ -321,6 +321,11 @@ def _extract_bbox_from_dict(d: dict) -> list:
                 # Nested list of bboxes, e.g. {"bbox_2d": [[x1,y1,x2,y2], ...]}
                 if len(val) > 0 and isinstance(val[0], list):
                     return [b[:4] for b in val if len(b) >= 4 and all(isinstance(x, (int, float)) for x in b[:4])]
+    # Gemini uses 'box_2d' with [y1, x1, y2, x2] (yxyx) — swap to xyxy
+    if 'box_2d' in d:
+        val = d['box_2d']
+        if isinstance(val, list) and len(val) >= 4 and all(isinstance(x, (int, float)) for x in val[:4]):
+            return [val[1], val[0], val[3], val[2]]
     if all(k in d for k in ['x1', 'y1', 'x2', 'y2']):
         return [d['x1'], d['y1'], d['x2'], d['y2']]
     if all(k in d for k in ['xmin', 'ymin', 'xmax', 'ymax']):
@@ -454,23 +459,17 @@ class VANTAGE_2DGroundingDataset(ImageBaseDataset):
     # Uses grounding framing (find the referred instance) rather than detection
     # framing (find all instances of the category).
     PROMPT_TEMPLATE = (
-        "You are performing referring-expression grounding.\n\n"
-        "Your task is to locate only the target object or objects described by the "
-        "referring expression below.\n\n"
-        "Referring expression:\n"
-        "{description}\n\n"
-        "Important rules:\n"
-        "1. Do not detect every object of the same category.\n"
-        "2. Use the spatial words in the expression, such as left, right, top, bottom, "
-        "near, far, closest, or largest, to choose the correct instance.\n"
-        "3. If the expression describes one object, return one bounding box.\n"
-        "4. If the expression clearly describes multiple objects, return one bounding box "
-        "for each target object.\n"
-        "5. Coordinates must be normalized to a 0-1000 scale.\n"
-        "6. Use [x1, y1, x2, y2] format.\n"
-        "7. Return only valid JSON. Do not include explanations, markdown, or extra text.\n\n"
-        "Output format:\n"
-        "{{\"bbox_2d\": [[x1, y1, x2, y2]]}}"
+        "As an AI visual assistant, your task is to identify and locate specific objects in the provided image.\n\n"
+        "Supplied Description: {description}\n\n"
+        "Task:\n"
+        "Based on the description and the image content, identify the key groups of objects mentioned. "
+        "For each group, provide a descriptive label and the precise bounding box coordinates for every individual instance in that group.\n\n"
+        "Coordinates must be normalized to a 0-1000 scale in [x1, y1, x2, y2] format.\n\n"
+        "Output Format:\n"
+        "For each group of objects, output one line in exactly this format:\n"
+        "The [object description]: [[x1, y1, x2, y2], [x3, y3, x4, y4]]\n\n"
+        "Example:\n"
+        "The blue cars parked on the right: [[579, 454, 690, 636], [342, 441, 435, 608]]"
     )
 
     @classmethod
@@ -513,7 +512,10 @@ class VANTAGE_2DGroundingDataset(ImageBaseDataset):
 
         # Critical check for data_root before proceeding to S3 or file lookups
         if self.data_root is None:
-            raise ValueError(f"data_root must be specified for dataset '{dataset}'")
+            raise ValueError(
+                f"data_root must be specified for dataset '{dataset}'. "
+                "Run: python scripts/run_lmudata.py --task grounding --lmu-root ~/LMUData"
+            )
 
         
         self.img_root = self.data_root
@@ -743,13 +745,20 @@ class VANTAGE_2DGroundingDataset(ImageBaseDataset):
             logger.info(f'Loaded {len(data)} predictions from {eval_file}')
         except Exception as e:
             logger.error(f'Failed to load predictions: {e}')
-            return {
-                'Acc@0.5': 0.0,
-                'Acc@0.25': 0.0,
-                'Acc@0.75': 0.0,
-                'Mean_IoU': 0.0,
-                'error': str(e)
-            }
+            return {'acc_at_0_5': 0.0, 'acc_at_0_25': 0.0, 'acc_at_0_75': 0.0, 'mean_iou': 0.0, 'error': str(e)}
+
+        import os as _os
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, _os.path.splitext(_os.path.basename(eval_file))[0], submission_path, task='grounding')
+        print(f"Submission written to: {submission_path}")
+
+        has_gt = 'gt_bboxes' in data.columns and data['gt_bboxes'].notna().any()
+        if not has_gt and 'gt_bboxes' in self.data.columns:
+            has_gt = self.data['gt_bboxes'].notna().any()
+        if not has_gt:
+            return {}
 
         # Evaluation metrics
         iou_thresholds = [0.25, 0.5, 0.75]
@@ -849,26 +858,27 @@ class VANTAGE_2DGroundingDataset(ImageBaseDataset):
         # Compute metrics
         mean_iou = np.mean(all_ious) if len(all_ious) > 0 else 0.0
 
-        result = {
-            'Acc@0.25': float(correct_at_threshold[0.25] / total_count * 100) if total_count > 0 else 0.0,
-            'Acc@0.5': float(correct_at_threshold[0.5] / total_count * 100) if total_count > 0 else 0.0,
-            'Acc@0.75': float(correct_at_threshold[0.75] / total_count * 100) if total_count > 0 else 0.0,
-            'Mean_IoU': float(mean_iou * 100),
-            'total_samples': total_count,
-            'valid_predictions': valid_count,
-            'valid_rate': valid_count / total_count if total_count > 0 else 0.0,
-            'parse_failures': parse_fail_count,
-            'invalid_boxes_filtered': invalid_box_count,
-        }
-        logger.info(f"Acc@0.25: {result['Acc@0.25']:.2f}%")
-        logger.info(f"Acc@0.5: {result['Acc@0.5']:.2f}%")
-        logger.info(f"Acc@0.75: {result['Acc@0.75']:.2f}%")
-        logger.info(f"Mean IoU: {result['Mean_IoU']:.2f}%")
-        logger.info(f"Valid predictions: {valid_count}/{total_count} ({result['valid_rate']:.2%})")
+        acc_25 = float(correct_at_threshold[0.25] / total_count) if total_count > 0 else 0.0
+        acc_50 = float(correct_at_threshold[0.5] / total_count) if total_count > 0 else 0.0
+        acc_75 = float(correct_at_threshold[0.75] / total_count) if total_count > 0 else 0.0
+
+        logger.info(f"Acc@0.25: {acc_25:.4f}")
+        logger.info(f"Acc@0.5: {acc_50:.4f}")
+        logger.info(f"Acc@0.75: {acc_75:.4f}")
+        logger.info(f"Mean IoU: {mean_iou:.4f}")
+        logger.info(f"Valid predictions: {valid_count}/{total_count} ({valid_count / total_count if total_count > 0 else 0:.2%})")
         logger.info(f"Parse failures: {parse_fail_count}, invalid boxes filtered: {invalid_box_count}")
 
+        result = {
+            'acc_at_0_5': acc_50,
+            'acc_at_0_25': acc_25,
+            'acc_at_0_75': acc_75,
+            'mean_iou': float(mean_iou),
+        }
         suffix = eval_file.split('.')[-1]
         metrics_file = eval_file.replace(f'.{suffix}', '_metrics.json')
-        dump(result, metrics_file)
+        dump({**result, 'total_samples': total_count, 'valid_predictions': valid_count,
+              'valid_rate': valid_count / total_count if total_count > 0 else 0.0,
+              'parse_failures': parse_fail_count, 'invalid_boxes_filtered': invalid_box_count}, metrics_file)
 
         return result

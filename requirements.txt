@@ -6,13 +6,12 @@ google-genai
 gradio
 huggingface_hub
 imageio
-ipdb
 json_repair
 math-verify
 matplotlib
 nltk
 numpy
-omegaconf>=2.4.0.dev4
+omegaconf>=2.3.0
 openai
 opencv-python>=4.7.0.72
 openpyxl

@@ -112,8 +112,7 @@ class VANTAGE_EventVerification(VideoBaseDataset):
         if not data_file.exists():
             raise FileNotFoundError(
                 f"VANTAGE_EventVerification TSV not found: {data_file}. "
-                "Place VANTAGE_EventVerification.tsv and videos/ under "
-                "LMUDataRoot()/datasets/VANTAGE_EventVerification/."
+                "Run: python scripts/run_lmudata.py --task event_verification --lmu-root ~/LMUData"
             )
         return dict(root=str(dataset_dir), data_file=str(data_file))
 
@@ -193,17 +192,18 @@ class VANTAGE_EventVerification(VideoBaseDataset):
         return None
     
     def evaluate(self, eval_file, **judge_kwargs):
-        """
-        Evaluate predictions against ground truth.
-        
-        Args:
-            eval_file: Path to file containing predictions
-            
-        Returns:
-            pd.DataFrame: Evaluation results with metrics
-        """
-        # Load predictions
         data = load(eval_file)
+
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
+        import os.path as _osp
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, _osp.splitext(_osp.basename(eval_file))[0], submission_path, task='event_verification')
+        print(f"Submission written to: {submission_path}")
+
+        if 'answer' not in self.data.columns:
+            return {}
+
         
         # Extract predictions and ground truth
         predictions = []
@@ -228,39 +228,33 @@ class VANTAGE_EventVerification(VideoBaseDataset):
         
         if len(predictions) == 0:
             print("Warning: No valid predictions found!")
-            return pd.DataFrame([{
-                'Correlation': None,
-                'Valid Predictions': 0,
-                'Total Samples': len(data)
-            }])
-        from sklearn.metrics import classification_report
+            return {'macro_f1': 0.0, 'accuracy': 0.0, 'balanced_accuracy': 0.0}
+
+        from sklearn.metrics import classification_report, balanced_accuracy_score
         report = classification_report(ground_truths, predictions, output_dict=True)
-        summary = {
-            "Valid Predictions": len(predictions),
-            'Total Samples': len(data),
-            **flatten_dict(report)
-        }
-        
-        print("\n" + "="*50)
+        macro_f1 = report.get('macro avg', {}).get('f1-score', 0.0)
+        accuracy = report.get('accuracy', 0.0)
+        bal_acc = balanced_accuracy_score(ground_truths, predictions)
+
+        print("\n" + "=" * 50)
         print("VANTAGE_EventVerification Evaluation Results")
-        print("="*50)
-        for key, value in summary.items():
-            if isinstance(value, float):
-                print(f"{key}: {value:.4f}")
-            else:
-                print(f"{key}: {value}")
-        print("="*50 + "\n")
-        
-        summary_df = pd.DataFrame([summary])
-        print(f"Summary DataFrame:\n{summary_df}")
-        
-        # Save results
+        print("=" * 50)
+        print(f"Macro F1:          {macro_f1:.4f}")
+        print(f"Accuracy:          {accuracy:.4f}")
+        print(f"Balanced Accuracy: {bal_acc:.4f}")
+        print(f"Valid Predictions: {len(predictions)} / {len(data)}")
+        print("=" * 50 + "\n")
+
+        result = {
+            'macro_f1': float(macro_f1),
+            'accuracy': float(accuracy),
+            'balanced_accuracy': float(bal_acc),
+        }
         suffix = eval_file.split('.')[-1]
         score_file = eval_file.replace(f'.{suffix}', '_acc.json')
-        dump(summary_df, score_file)
+        dump(result, score_file)
         print(f"Saved evaluation metrics to {score_file}")
-        
-        return summary_df
+        return result
     
     def _extract_answer(self, text):
         if pd.isna(text):

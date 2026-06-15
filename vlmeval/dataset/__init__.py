@@ -70,7 +70,6 @@ from .qbench_video import QBench_Video, QBench_Video_MCQ, QBench_Video_VQA
 from .vantage_vqa import VANTAGE_VQA
 from .vantage_temporal import VANTAGE_Temporal
 from .vantage_dvc import VANTAGE_DVC
-from .vantage2d.detection_2d_dataset import VANTAGE_2DDetectionDataset
 from .vantage2d.grounding_2d_dataset import VANTAGE_2DGroundingDataset
 from .vantage2d.astro_2d_dataset import Astro2DDetectionDataset
 from .vantage_event_verification import VANTAGE_EventVerification
@@ -241,7 +240,7 @@ IMAGE_DATASET = [
     MedqbenchPairedDescriptionDataset, MedqbenchCaptionDataset, ChartMuseum, ChartQAPro, ReasonMap_Plus,
     olmOCRBench, OceanOCRBench, MATBench, VLRMBench, RefCOCODataset, SimpleVQA, HiPhODataset, MaCBench,
     UniSVG, SArena_MINI, MMSIVideoBench,
-    VANTAGE_2DDetectionDataset, VANTAGE_2DGroundingDataset, Astro2DDetectionDataset, VANTAGE_2DPointing
+    VANTAGE_2DGroundingDataset, Astro2DDetectionDataset, VANTAGE_2DPointing
 ]
 
 VIDEO_DATASET = [

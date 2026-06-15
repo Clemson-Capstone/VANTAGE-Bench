@@ -101,3 +101,15 @@ Notes:
 
 - evaluator can fall back to the dataset TSV for GT boxes if they are not embedded in the prediction file
 - if `image_width` / `image_height` are absent, the evaluator can recover them from the image file when needed
+
+## 2D Pointing
+
+Minimum columns:
+
+- `index`
+- `prediction`
+
+Notes:
+
+- this is a multiple-choice task; the prediction should contain a recoverable answer letter (A/B/C/D)
+- GT answer and spatial reference are resolved from the dataset TSV by `index`

@@ -1,0 +1,33 @@
+{
+    "_comment": "GPT-4o via OpenAI API. No GPU required. Set OPENAI_API_KEY env var. Optionally set OPENAI_API_BASE for a proxy or OpenAI-compatible endpoint (must be a full URL ending in /v1/chat/completions).",
+    "model": {
+        "GPT4o": {
+            "class": "GPT4V",
+            "model": "gpt-4o-2024-11-20",
+            "temperature": 0,
+            "img_detail": "high",
+            "max_tokens": 4096,
+            "retry": 5,
+            "timeout": 120
+        }
+    },
+    "data": {
+        "VANTAGE_VQA_8frame": {},
+        "VANTAGE_EventVerification_8frame": {},
+        "VANTAGE_Temporal_8frame": {},
+        "VANTAGE_DVC_8frame": {},
+        "VANTAGE_SOT": {},
+        "VANTAGE_2DGrounding": {
+            "class": "VANTAGE_2DGroundingDataset",
+            "dataset": "VANTAGE_2DGrounding"
+        },
+        "VANTAGE_2DPointing": {
+            "class": "VANTAGE_2DPointing",
+            "dataset": "VANTAGE_2DPointing"
+        },
+        "Astro2D": {
+            "class": "Astro2DDetectionDataset",
+            "dataset": "Astro2D"
+        }
+    }
+}

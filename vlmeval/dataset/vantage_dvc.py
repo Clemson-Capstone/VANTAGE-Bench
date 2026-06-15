@@ -74,29 +74,7 @@ def _chased_dp_assignment(scores: np.ndarray) -> Tuple[float, List[Tuple[int, in
 class VANTAGE_DVC(VideoBaseDataset):
     MD5 = ''
     TYPE = 'Video-DVC'
-    DENSE_CAPTION_QUERY = """You are an expert at running dense video captioning. Your task is to provide a dense, event-level video caption with precise timestamps for a given video.
-
-Structure your response as a list of events. For each event, provide the start and end timestamp in the format <HH:MM:SS><HH:MM:SS> followed by a detailed description of the event.
-
-Format each line as:
-<Start_Timestamp><End_Timestamp> Description of the event.
-
-Example 1:
-<00:00:00><00:00:02> Traffic is flowing through the intersection from top to bottom.
-<00:00:00><00:00:05> Cars and a motorcycle are waiting in the intersection for road going from right to left.
-<00:00:05><00:00:05> Traffic signal phase changes, and cars and a motorcycle start moving into the intersection for road going right to left
-<00:00:05><00:00:09> A blue vehicle travelling on road going from top to bottom drives through and collides with black SUV going from right to left. The black SUV rolls over and collides with a motorcycle.
-<00:00:09><00:00:17> Other cars slowly approach the intersection from top of the frame
-
-Example 2:
-<00:00:00><00:00:12> Traffic is continuously flowing from top to the bottom on the left of the median.
-<00:00:00><00:00:05> Traffic is continuously flowing from bottom to top on the right. The first lane on the right of the median is congested with a long queue of cars.
-<00:00:02><00:00:04> A white SUV drives slowly from bottom to top on the congested lane and stops with certain distance behind a black car
-<00:00:04><00:00:05> A blue car crashes into the white SUV, rear-ending it.
-<00:00:05><00:00:06> A white SUV collides with the blue car from behind, which in turn pushes the blue car forward, causing it to hit the first white SUV again. The three cars are now in a pile-up on the first lane on the right of the median.
-<00:00:06><00:00:07> Another white SUV crashes into the rear of the white SUV, turning the three-car pile-up into a four-car pile-up
-<00:00:07><00:00:12> Traffic continues flowing from bottom to top in another two lanes on right.
-"""
+    DENSE_CAPTION_QUERY = "Describe the notable events in the provided video. Provide the result in json format with 'mm:ss.ff' format for time depiction for each event. Use keywords 'start', 'end' and 'caption' in the json output."
 
     def __init__(self, dataset='VANTAGE_DVC', pack=False, nframe=0, fps=0, total_pixels=None, max_pixels=None, max_frames=None, test_mode=False, limit=None, random_state=None, include_categories=None, custom_prompt=None):
         self.test_mode = test_mode
@@ -151,13 +129,13 @@ Example 2:
         else:
             raise FileNotFoundError(
                 f"VANTAGE_DVC data not found under {local_dir}. "
-                "Place VANTAGE_DVC.tsv and videos/ under LMUDataRoot()/datasets/VANTAGE_DVC/."
+                "Run: python scripts/run_lmudata.py --task dvc --lmu-root ~/LMUData"
             )
         data_file = osp.join(dataset_path, f'{dataset_name}.tsv')
         if not osp.exists(data_file):
             raise FileNotFoundError(
                 f"VANTAGE_DVC TSV not found: {data_file}. "
-                "Use local data under LMUDataRoot()/datasets/VANTAGE_DVC/"
+                "Run: python scripts/run_lmudata.py --task dvc --lmu-root ~/LMUData"
             )
         return dict(data_file=data_file, root=osp.join(dataset_path, 'videos'))
 
@@ -230,6 +208,16 @@ Example 2:
 
     def evaluate(self, eval_file, **judge_kwargs):
         data = load(eval_file)
+
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, osp.splitext(osp.basename(eval_file))[0], submission_path, task='dvc')
+        print(f"Submission written to: {submission_path}")
+
+        if 'answer' not in self.data.columns:
+            return {}
+
         preds = {}
         gts = {}
         categories = {}
@@ -280,8 +268,7 @@ Example 2:
             try:
                 import torch
                 from bert_score import BERTScorer
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-                bert_scorer = BERTScorer(model_type="roberta-large", device=device)
+                bert_scorer = BERTScorer(model_type="roberta-large", device="cpu")
             except ImportError:
                 print("Warning: bert_score not available, using dummy (F1=0.5). pip install bert-score")
         def bert_remote(cands, refs):
@@ -344,7 +331,13 @@ Example 2:
                 w.writerow([cat, f"{mean_iou:.4f}", f"{v['IoU_F1']:.4f}", f"{v['BertScore_F1']:.4f}", f"{v['SODA_c']:.4f}", v["count"]])
             w.writerow(["Overall", f"{final['overall']['mIoU']:.4f}", f"{final['overall']['IoU_F1']:.4f}", f"{final['overall']['BertScore_F1']:.4f}", f"{final['overall']['SODA_c']:.4f}", final['overall']['count']])
         dump(final, get_intermediate_file_path(eval_file, '_metrics', 'json'))
-        return final
+        overall = final.get('overall', {})
+        return {
+            'soda_c': overall.get('SODA_c', 0.0),
+            'miou': overall.get('mIoU', 0.0),
+            'iou_f1': overall.get('IoU_F1', 0.0),
+            'bertscore_f1': overall.get('BertScore_F1', 0.0),
+        }
 
 if __name__ == "__main__":
     main()

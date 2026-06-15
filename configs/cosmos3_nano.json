@@ -1,0 +1,30 @@
+{
+    "_comment": "Cosmos3-Nano via HuggingFace transformers. Requires a special package — run: pip install \"transformers_cosmos3 @ git+https://github.com/NVIDIA/cosmos-framework.git#subdirectory=packages/transformers-cosmos3\". Min GPU: 1x8GB VRAM.",
+    "model": {
+        "Cosmos3-Nano": {
+            "class": "Cosmos3",
+            "model_path": "nvidia/Cosmos3-Nano",
+            "temperature": 0.0,
+            "max_new_tokens": 4096
+        }
+    },
+    "data": {
+        "VANTAGE_VQA_8frame": {},
+        "VANTAGE_EventVerification_8frame": {},
+        "VANTAGE_Temporal_8frame": {},
+        "VANTAGE_DVC_8frame": {},
+        "VANTAGE_SOT": {},
+        "VANTAGE_2DGrounding": {
+            "class": "VANTAGE_2DGroundingDataset",
+            "dataset": "VANTAGE_2DGrounding"
+        },
+        "VANTAGE_2DPointing": {
+            "class": "VANTAGE_2DPointing",
+            "dataset": "VANTAGE_2DPointing"
+        },
+        "Astro2D": {
+            "class": "Astro2DDetectionDataset",
+            "dataset": "Astro2D"
+        }
+    }
+}

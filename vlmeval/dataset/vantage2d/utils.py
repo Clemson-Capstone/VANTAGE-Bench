@@ -32,13 +32,23 @@ def load_dataset_config(dataset_name, config_path=None, task='detection'):
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
 
-        # Look in 'detection' section
-        if task in config:
-            for dataset_cfg in config[task]:
-                if dataset_cfg.get('name') == dataset_name:
-                    return dataset_cfg
+        cfg = None
 
-        return None
+        # Primary: top-level key lookup (e.g. "Astro2D: {data_root: ...}")
+        if dataset_name in config and isinstance(config[dataset_name], dict):
+            cfg = dict(config[dataset_name])
+
+        # Fallback: section-based list lookup (e.g. "detection: [{name: Astro2D, ...}]")
+        elif task in config and isinstance(config[task], list):
+            for entry in config[task]:
+                if entry.get('name') == dataset_name:
+                    cfg = dict(entry)
+                    break
+
+        if cfg and 'data_root' in cfg:
+            cfg['data_root'] = os.path.expanduser(cfg['data_root'])
+
+        return cfg
     except Exception:
         return None
 

@@ -2947,8 +2947,8 @@ class VANTAGE_2DPointing(ImageMCQDataset):
         # 3. Validation
         if not osp.exists(data_file):
             raise FileNotFoundError(
-                f"Local TSV not found at {data_file}. "
-                "Ensure your data is in the datasets/VANTAGE_2DPointing/ directory."
+                f"VANTAGE_2DPointing TSV not found at {data_file}. "
+                "Run: python scripts/run_lmudata.py --task pointing --lmu-root ~/LMUData"
             )
 
         # 4. Set the img_root so build_prompt knows where images are
@@ -2971,7 +2971,7 @@ class VANTAGE_2DPointing(ImageMCQDataset):
         question = line['question']
         options = {cand: line[cand] for cand in 'ABCD' if cand in line and not pd.isna(line[cand])}
         
-        options_prompt = 'Options (Coordinates are [x,y]):\n'
+        options_prompt = 'Options (coordinates normalized to 0-1000 scale [x, y]):\n'
         for key, item in options.items():
             options_prompt += f'{key}. {item}\n'
 
@@ -2997,11 +2997,22 @@ class VANTAGE_2DPointing(ImageMCQDataset):
         from .utils import build_judge
         from ..smp.file import get_intermediate_file_path, get_file_extension
         import csv
+        import os.path as _osp
 
         assert get_file_extension(eval_file) in ['xlsx', 'json', 'tsv'], \
             'data file should be a supported format (xlsx/json/tsv) file'
 
         data = load(eval_file)
+
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, _osp.splitext(_osp.basename(eval_file))[0], submission_path, task='pointing')
+        print(f"Submission written to: {submission_path}")
+
+        if 'answer' not in self.data.columns:
+            return {}
+
         verbose = judge_kwargs.get('verbose', False) or self.verbose
         results = {}
         category_stats = defaultdict(lambda: {"correct": 0, "total": 0})
@@ -3085,4 +3096,4 @@ class VANTAGE_2DPointing(ImageMCQDataset):
                 writer.writerow([category, f"{values['acc']:.4f}", values['correct'], values['total']])
 
         print(f"\nResults saved to: {results_file}, {acc_file}, {csv_path}")
-        return acc_summary
+        return {'accuracy': overall_acc}

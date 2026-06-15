@@ -107,9 +107,8 @@ def compute_bbox_area(bbox):
 # Default prompt for detection
 DETECTION_PROMPT = (
     "Locate every instance that belongs to the following categories: 'person'. "
-    "For each instance of the class, report bbox coordinates in JSON format. "
-    "Do not group instances and report only individual instances. "
-    "Avoid reporting duplicate instances."
+    'Report bbox coordinates as JSON: [{"bbox_2d": [x1, y1, x2, y2], "label": "..."}]. '
+    "Coordinates normalized to 0-1000."
 )
 
 
@@ -257,7 +256,10 @@ class Astro2DDetectionDataset(ImageBaseDataset):
     def _get_image_files(self):
         """Get list of image files from the images directory."""
         if not os.path.exists(self.images_dir):
-            raise FileNotFoundError(f"Images directory not found: {self.images_dir}")
+            raise FileNotFoundError(
+                f"Images directory not found: {self.images_dir}. "
+                "Run: python scripts/run_lmudata.py --task astro2d --lmu-root ~/LMUData"
+            )
 
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}
         image_files = []
@@ -415,16 +417,10 @@ class Astro2DDetectionDataset(ImageBaseDataset):
     def evaluate(self, eval_file, **judge_kwargs):
         """
         Evaluate predictions using Precision, Recall, and F1 score at multiple IoU thresholds.
-
-        All predictions and ground truth labels are mapped to 'person' category
-        before evaluation. Bboxes with area smaller than min_bbox_area are filtered out.
-
-        Reports:
-        - F1@0.5: F1 score at IoU threshold 0.5
-        - F1@0.95: F1 score at IoU threshold 0.95
-        - F1@mIOU: Mean F1 score across IoU thresholds from 0.5 to 0.95 (step 0.05)
         """
         logger = get_logger('Astro2D')
+
+        from vlmeval.dataset.utils.vantagebench.emit import emit_submission
 
         # Try different file extensions if the specified one doesn't exist
         if not os.path.exists(eval_file):
@@ -453,16 +449,16 @@ class Astro2DDetectionDataset(ImageBaseDataset):
             logger.info(f'Loaded {len(data)} predictions from {eval_file}')
         except Exception as e:
             logger.error(f'Failed to load predictions: {e}')
-            return {
-                'precision': 0.0,
-                'recall': 0.0,
-                'f1': 0.0,
-                'f1_0.95': 0.0,
-                'f1_mIOU': 0.0,
-                'total_predictions': 0,
-                'valid_bbox_predictions': 0,
-                'error': str(e)
-            }
+            return {'precision': 0.0, 'recall': 0.0, 'f1': 0.0, 'f1_at_0_95': 0.0, 'f1_miou': 0.0, 'error': str(e)}
+
+        _suffix = eval_file.split('.')[-1]
+        submission_path = eval_file.replace(f'.{_suffix}', '_submission.jsonl')
+        emit_submission(data, os.path.splitext(os.path.basename(eval_file))[0], submission_path, task='astro')
+        print(f"Submission written to: {submission_path}")
+
+        has_gt = hasattr(self, 'labels_dir') and os.path.isdir(self.labels_dir) and bool(os.listdir(self.labels_dir))
+        if not has_gt:
+            return {}
 
         # Collect all predictions and ground truths for multi-threshold evaluation
         all_predictions = []  # List of (pred_boxes_person, gt_boxes_person) tuples
@@ -585,12 +581,7 @@ class Astro2DDetectionDataset(ImageBaseDataset):
         # Compute mean F1 across all thresholds (F1@mIOU)
         f1_mIOU = np.mean([f1_scores[t]['f1'] for t in iou_thresholds])
 
-        result = {
-            'precision': float(precision * 100),
-            'recall': float(recall * 100),
-            'f1': float(f1_05 * 100),
-            'f1_0.95': float(f1_095 * 100),
-            'f1_mIOU': float(f1_mIOU * 100),
+        debug_info = {
             'total_predictions': len(data),
             'valid_bbox_predictions': valid_count,
             'valid_rate': valid_count / len(data) if len(data) > 0 else 0,
@@ -608,18 +599,25 @@ class Astro2DDetectionDataset(ImageBaseDataset):
                            "Check that the prediction JSON uses a recognized key: "
                            "bbox_2d, box_2d, or bbox.")
 
-        logger.info(f"Precision@IoU=0.5: {result['precision']:.2f}%")
-        logger.info(f"Recall@IoU=0.5: {result['recall']:.2f}%")
-        logger.info(f"F1@IoU=0.5: {result['f1']:.2f}%")
-        logger.info(f"F1@IoU=0.95: {result['f1_0.95']:.2f}%")
-        logger.info(f"F1@mIOU (0.5:0.05:0.95): {result['f1_mIOU']:.2f}%")
+        logger.info(f"Precision@IoU=0.5: {precision:.4f}")
+        logger.info(f"Recall@IoU=0.5: {recall:.4f}")
+        logger.info(f"F1@IoU=0.5: {f1_05:.4f}")
+        logger.info(f"F1@IoU=0.95: {f1_095:.4f}")
+        logger.info(f"F1@mIOU (0.5:0.05:0.95): {f1_mIOU:.4f}")
         logger.info(f"TP: {total_tp}, FP: {total_fp}, FN: {total_gt - total_tp}")
-        logger.info(f"Valid predictions: {valid_count}/{len(data)} ({result['valid_rate']:.2%})")
+        logger.info(f"Valid predictions: {valid_count}/{len(data)} ({debug_info['valid_rate']:.2%})")
         logger.info(f"Filtered small bboxes - GT: {total_gt_filtered}, Pred: {total_pred_filtered}")
 
         suffix = eval_file.split('.')[-1]
         score_file = eval_file.replace(f'.{suffix}', '_metrics.json')
-        dump(result, score_file)
+        dump({**debug_info, 'f1': f1_05, 'precision': precision, 'recall': recall,
+              'f1_at_0_95': f1_095, 'f1_miou': f1_mIOU}, score_file)
         logger.info(f"Metrics saved to {score_file}")
 
-        return result
+        return {
+            'f1': float(f1_05),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1_at_0_95': float(f1_095),
+            'f1_miou': float(f1_mIOU),
+        }
