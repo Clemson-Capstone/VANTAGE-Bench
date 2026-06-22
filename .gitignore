@@ -213,7 +213,11 @@ SenseNova*
 .DS_Store
 
 temp
-result*
+# Only ignore result artifacts, not source under vlmeval/ (e.g.
+# vlmeval/utils/result_transfer.py). A bare `result*` previously swept that
+# source file out of version control.
+/result*
+*.result
 
 
 # slurm and tsv file creation

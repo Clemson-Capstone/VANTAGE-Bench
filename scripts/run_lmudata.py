@@ -63,10 +63,10 @@ REPO_TOP_MARKERS = ["data", "README.md", "LICENSE.md"]
 # silently producing wrong data.
 LOCAL_TASK_MARKERS: Dict[str, List[str]] = {
     "vqa": ["data/vqa/data_jsons/annotations"],
-    "event_verification": ["data/event_verification/data_jsons/annotations"],
+    "event_verification": ["data/event_verification/filtered"],
     "dvc": ["data/dense_captioning/metadata.jsonl"],
     "temporal": ["data/temporal_localization/data_jsons/annotations"],
-    "pointing": ["data/pointing/VANTAGE_2DPointing.jsonl"],
+    "pointing": ["data/pointing/Vantage2DPointing.tsv"],
     "astro2d": ["data/2dbbox/metadata.jsonl"],
     "grounding": [
         "data/referring/refdrone_test_llava.json",
@@ -148,8 +148,10 @@ TASK_CONFIG: Dict[str, Dict[str, Any]] = {
         "media_dir": "videos",
         "media_glob": "*.mp4",
         "hf_patterns": [
-            "data/event_verification/data_jsons/annotations/*.json",
-            "data/event_verification/videos/*",
+            # Public dataset layout: per-group test_annotation*.json + nested
+            # video subtrees, all under filtered/. fnmatch '*' spans '/', so this
+            # single pattern recursively pulls annotations + videos.
+            "data/event_verification/filtered/**",
         ],
     },
     "dvc": {
@@ -179,7 +181,7 @@ TASK_CONFIG: Dict[str, Dict[str, Any]] = {
         "media_dir": "images_annotated",
         "media_glob": "*",
         "hf_patterns": [
-            "data/pointing/VANTAGE_2DPointing.jsonl",
+            "data/pointing/Vantage2DPointing.tsv",
             "data/pointing/images_annotated/*",
         ],
     },
@@ -671,10 +673,15 @@ EV_DEFAULT_SYSTEM_PROMPT = (
 
 def _ev_load_items(path: Path) -> List[Dict[str, Any]]:
     raw = _load_json(path)
-    if isinstance(raw, dict) and "bcq" in raw:
-        return list(raw["bcq"])
     if isinstance(raw, list):
         return raw
+    if isinstance(raw, dict):
+        if isinstance(raw.get("bcq"), list):
+            return list(raw["bcq"])
+        # Public dataset wraps the item list under a single (dataset-named) key.
+        for value in raw.values():
+            if isinstance(value, list):
+                return list(value)
     log.warning("EV: unrecognized JSON shape in %s", path.name)
     return []
 
@@ -682,64 +689,77 @@ def _ev_load_items(path: Path) -> List[Dict[str, Any]]:
 def _prep_event_verification(snap_dir: Path, target_dir: Path, opts: Options) -> TaskResult:
     res = TaskResult(task="event_verification", lmu_name="VANTAGE_EventVerification",
                      target_dir=target_dir, status="dry-run")
-    ann_dir = snap_dir / "data" / "event_verification" / "data_jsons" / "annotations"
-    src_videos = snap_dir / "data" / "event_verification" / "videos"
-    if not ann_dir.exists():
-        raise SystemExit(f"EV annotations dir missing in snapshot: {ann_dir}")
+    filtered_dir = snap_dir / "data" / "event_verification" / "filtered"
+    if not filtered_dir.exists():
+        raise SystemExit(f"EV filtered dir missing in snapshot: {filtered_dir}")
+    ann_files = sorted(filtered_dir.glob("**/test_annotation*.json"))
+    if not ann_files:
+        raise SystemExit(f"EV: no test_annotation*.json found under {filtered_dir}")
 
     rows: List[Dict[str, Any]] = []
     seen: set = set()
-    for jf in sorted(ann_dir.glob("*.json")):
+    # Output video filename -> resolved source path. Videos live in nested
+    # per-group subtrees and each annotation's 'video' field is relative to the
+    # directory holding that annotation file.
+    video_srcs: Dict[str, Path] = {}
+    for jf in ann_files:
         items = _ev_load_items(jf)
         if not items:
             continue
-        res.source_files.append(jf.name)
+        res.source_files.append(str(jf.relative_to(filtered_dir)))
+        group_dir = jf.parent
         for item in items:
             video = item.get("video") or item.get("video_id") or ""
             if not video:
                 continue
-            video = _ensure_mp4(os.path.basename(video))
+            vname = _ensure_mp4(os.path.basename(video))
             question = item.get("question", "")
             if not question:
                 continue
             iid = item.get("id", "")
-            key = (video, iid or question[:80])
+            key = (vname, iid or question[:80])
             if key in seen:
                 continue
             seen.add(key)
             sys_prompt = item.get("system_prompt") or EV_DEFAULT_SYSTEM_PROMPT
-            category = _normalize_category(item.get("category"))
             rows.append({
-                "video": video,
+                "video": vname,
                 "system_prompt": sys_prompt,
                 "question": question,
-                "answer": "",
-                "category": category,
                 "_id": iid,
             })
+            src_video = group_dir / video
+            if vname in video_srcs:
+                if video_srcs[vname].resolve() != src_video.resolve():
+                    res.notes.append(f"video basename collision: {vname}")
+            elif src_video.exists():
+                video_srcs[vname] = src_video
 
     rows.sort(key=lambda r: (r["video"], r["_id"]))
     for i, r in enumerate(rows):
         r["index"] = i
         r.pop("_id", None)
 
-    # Inference-only schema: GT columns (answer, category) dropped.
-    # system_prompt is REQUIRED — build_prompt reads line['system_prompt']
-    # unconditionally and it is prompt framing, not ground truth.
+    # Inference-only schema. system_prompt is REQUIRED — build_prompt reads
+    # line['system_prompt'] unconditionally and it is prompt framing, not GT.
     columns = ["index", "video", "system_prompt", "question"]
     tsv = target_dir / "VANTAGE_EventVerification.tsv"
     media_dst = target_dir / "videos"
 
     if opts.dry_run:
         res.rows = len(rows)
-        res.media_count = sum(1 for _ in src_videos.glob("*.mp4")) if src_videos.exists() else 0
-        res.notes.append(f"plan: write {tsv} and link {res.media_count} videos")
+        res.media_count = len(video_srcs)
+        res.notes.append(f"plan: write {tsv} and link {len(video_srcs)} videos")
         return res
 
     if opts.force_clean:
         _wipe_dir(media_dst, opts.dry_run)
     _write_tsv(tsv, rows, columns, opts.dry_run)
-    placed = _link_or_copy_dir(src_videos, media_dst, opts)
+    _ensure_dir(media_dst, opts.dry_run)
+    placed = 0
+    for vname, src in sorted(video_srcs.items()):
+        if _link_or_copy_file(src, media_dst / vname, opts):
+            placed += 1
     res.rows = len(rows)
     res.media_count = placed
     res.status = "built"
@@ -888,7 +908,7 @@ def _prep_temporal(snap_dir: Path, target_dir: Path, opts: Options) -> TaskResul
 
 
 # ---------------------------------------------------------------------------
-# 2DPointing  (JSONL -> TSV)
+# 2DPointing  (TSV -> TSV)
 # ---------------------------------------------------------------------------
 
 POINTING_COLUMNS = ["index", "question_id", "image_path", "question", "A", "B", "C", "D"]
@@ -897,18 +917,15 @@ POINTING_COLUMNS = ["index", "question_id", "image_path", "question", "A", "B", 
 def _prep_pointing(snap_dir: Path, target_dir: Path, opts: Options) -> TaskResult:
     res = TaskResult(task="pointing", lmu_name="VANTAGE_2DPointing",
                      target_dir=target_dir, status="dry-run")
-    jsonl_path = snap_dir / "data" / "pointing" / "VANTAGE_2DPointing.jsonl"
+    tsv_src = snap_dir / "data" / "pointing" / "Vantage2DPointing.tsv"
     src_images = snap_dir / "data" / "pointing" / "images_annotated"
-    if not jsonl_path.exists():
-        raise SystemExit(
-            f"Pointing JSONL missing in snapshot: {jsonl_path}\n"
-            "The script targets the post-PR layout where pointing is JSONL. If the "
-            "live nvidia/PhysicalAI-VANTAGE-Bench still ships a TSV, this task will "
-            "fail until the PR merges."
-        )
-    res.source_files.append(jsonl_path.name)
+    if not tsv_src.exists():
+        raise SystemExit(f"Pointing TSV missing in snapshot: {tsv_src}")
+    res.source_files.append(tsv_src.name)
 
-    items = _load_jsonl(jsonl_path)
+    # Public dataset ships a TSV already in the target schema (POINTING_COLUMNS).
+    with open(tsv_src, encoding="utf-8") as f:
+        items = list(csv.DictReader(f, delimiter="\t"))
     rows: List[Dict[str, Any]] = []
     missing_images: List[str] = []
     for i, item in enumerate(items):

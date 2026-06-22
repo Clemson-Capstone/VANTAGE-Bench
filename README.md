@@ -207,6 +207,13 @@ pip install -e .
 pip install vllm
 ```
 
+> **Fresh-clone note.** `run.py` imports `MMMU_result_transfer` / `MMTBench_result_transfer`
+> from `vlmeval/utils/result_transfer.py` at startup, so that file must be present or the
+> script fails to import before any inference runs (it is only exercised by the non-VANTAGE
+> `MMMU_TEST` / `MMT-Bench_ALL` datasets). The `.gitignore` `result*` rule is anchored
+> (`/result*`, `*.result`) specifically so it does **not** exclude that source file; do not
+> revert it to a bare `result*`.
+
 ---
 
 ## Dataset Setup
@@ -230,6 +237,20 @@ python scripts/run_lmudata.py \
 ```
 
 Full documentation, prerequisites (ffmpeg, gdown), troubleshooting, and advanced options are in **[`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md)**.
+
+#### Source layout for EventVerification and 2DPointing
+
+The prep script reads these two tasks directly from the public release layout:
+
+- **EventVerification** — annotations and videos are downloaded from
+  `data/event_verification/filtered/**`. Annotation files are named
+  `test_annotation*.json` and live in **per-group subdirectories**; the item list inside
+  each is wrapped under a single (dataset-named) top-level key. Each item's `video` path is
+  resolved **relative to its own annotation file's directory** — videos are in nested
+  subtrees, not a single flat `videos/` folder. Output video basenames are de-duplicated.
+- **2DPointing** — the source is `data/pointing/Vantage2DPointing.tsv`, a TSV already in
+  the benchmark schema (read directly with `csv.DictReader`). There is no
+  `VANTAGE_2DPointing.jsonl`.
 
 ### Local layout
 

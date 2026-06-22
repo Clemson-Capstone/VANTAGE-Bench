@@ -95,13 +95,13 @@ python scripts/run_lmudata.py --all --lmu-root ~/LMUData \
   --local-source /path/to/PhysicalAI-VANTAGE-Bench
 ```
 - Takes precedence over auto-detect and `--hf-repo`.
-- The checkout must be **complete and post-PR** (validated per task).
+- The checkout must match the **public release layout** (validated per task).
 
 ### D. Warnings for local mode
 
-- **Stale / pre-PR clone fails validation.** Each task checks for its expected
-  post-PR paths (e.g. `data/pointing/VANTAGE_2DPointing.jsonl`,
-  `data/event_verification/data_jsons/annotations/`). A missing marker fails
+- **Wrong / incomplete clone fails validation.** Each task checks for its expected
+  public-release paths (e.g. `data/pointing/Vantage2DPointing.tsv`,
+  `data/event_verification/filtered/`). A missing marker fails
   *that task* with a clear message — it never silently serves the wrong layout.
 - **Missing Git LFS files** (videos/images not pulled) will fail media checks.
   Run `git lfs pull` in the clone first.
