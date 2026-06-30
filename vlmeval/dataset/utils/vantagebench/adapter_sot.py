@@ -144,6 +144,9 @@ def evaluate_sot_submission(
     # no _prepare_data_from_dir call, no filesystem scan.
     ds = VANTAGE_SOT.__new__(VANTAGE_SOT)
     ds.verbose = False
+    # __init__ (bypassed by __new__) normally sets this; evaluate() ->
+    # parse_sot_response reads it. 'cr' is the neutral default (no gemini y/x swap).
+    ds.model_family = 'cr'
     ds._gt_cache = _build_synthetic_gt_cache(private_gt)
     # data is not consulted by evaluate(); placeholder for inherited helpers.
     ds.data = pd.DataFrame([])
