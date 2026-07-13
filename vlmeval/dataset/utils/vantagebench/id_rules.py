@@ -6,6 +6,13 @@ callers would silently break the submission<->GT join, so all id construction
 MUST go through these helpers.
 """
 
+import re
+
+# '<prefix>__<unpadded frame>__obj<id>' as spelled by the public dataset's
+# sot_benchmark.jsonl 'seq_id'. Canonical names use a single '_' before a
+# zero-padded frame id and therefore do not match.
+_SOT_DATASET_SEQ_RE = re.compile(r'^(?P<prefix>.+)__(?P<frame>\d+)__obj(?P<obj>.+)$')
+
 
 def _video_stem(video):
     """Strip a trailing '.mp4' from a video filename. No other normalization."""
@@ -118,17 +125,32 @@ def make_astro_id(image_filename, index):
 def make_sot_id(seq_dir_name):
     """Canonical VANTAGE_SOT id.
 
-    Format: passthrough of seq_dir.name.
+    Format: '{scene}__{camera}_{init_frame_id:07d}__obj{object_id}'
+    e.g. 'Warehouse_000__Camera_0003_0005648__obj37'.
 
     Unlike prior phase id rules, SOT does NOT add a task token or index
-    suffix. The seq_dir basename (e.g.,
-    'Warehouse_000__Camera_0003_0005648__obj37') is already a stable
-    semantic id — adding a synthetic suffix would be redundant.
+    suffix. The sequence basename is already a stable semantic id, so adding a
+    synthetic suffix would be redundant.
 
-    Verified unique on the live VANTAGE_SOT dataset (200/200 sequence dirs).
+    The public dataset spells the same sequence differently in
+    data/tracking/sot_benchmark.jsonl ('seq_id'), which is what run_lmudata.py
+    names the frame dirs after:
+
+        dataset   Warehouse_000__Camera_0003__5648__obj37
+        canonical Warehouse_000__Camera_0003_0005648__obj37
+
+    i.e. a doubled separator and an unpadded frame id. Passing that through
+    verbatim yields ids that join 0/200 against the ground truth, silently
+    zeroing an entire pillar. Normalize it here so both spellings converge on
+    the canonical form. Already-canonical names do not match the pattern (the
+    frame id is preceded by a single '_') and are returned unchanged.
 
     The single argument is intentional: SOT id derivation does NOT depend on
     an enumeration index. The whole point of this id is to REPLACE the
     fragile enumeration-int join key used by the legacy evaluator cache.
     """
-    return str(seq_dir_name)
+    name = str(seq_dir_name)
+    m = _SOT_DATASET_SEQ_RE.match(name)
+    if m is None:
+        return name
+    return f"{m.group('prefix')}_{int(m.group('frame')):07d}__obj{m.group('obj')}"
