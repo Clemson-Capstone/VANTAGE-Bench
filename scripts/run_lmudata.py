@@ -57,16 +57,15 @@ MANIFEST_FILENAME = ".vantage_prep_manifest.json"
 # Top-level files/dirs that mark a PhysicalAI-VANTAGE-Bench checkout.
 REPO_TOP_MARKERS = ["data", "README.md", "LICENSE.md"]
 
-# Per-task required paths (relative to repo root) for a LOCAL source to be
-# usable. These encode the post-PR layout; a stale/pre-PR clone that lacks the
-# marker fails validation for that task with a clear message rather than
-# silently producing wrong data.
+# Per-task paths (relative to repo root) that a LOCAL source must provide for a
+# task to be usable. A clone that lacks them fails validation for that task with
+# a clear message rather than silently producing wrong data.
+#
+# LOCAL_TASK_MARKERS entries are ALL required.
 LOCAL_TASK_MARKERS: Dict[str, List[str]] = {
     "vqa": ["data/vqa/data_jsons/annotations"],
-    "event_verification": ["data/event_verification/filtered"],
     "dvc": ["data/dense_captioning/metadata.jsonl"],
     "temporal": ["data/temporal_localization/data_jsons/annotations"],
-    "pointing": ["data/pointing/Vantage2DPointing.tsv"],
     "astro2d": ["data/2dbbox/metadata.jsonl"],
     "grounding": [
         "data/referring/refdrone_test_llava.json",
@@ -75,6 +74,26 @@ LOCAL_TASK_MARKERS: Dict[str, List[str]] = {
     "sot": [
         "data/tracking/sot_benchmark.jsonl",
         "data/tracking/prepare_sot_dataset.py",
+    ],
+}
+
+# LOCAL_TASK_MARKER_ANY entries are ALTERNATIVES: the task is usable if ANY one
+# is present. EventVerification and 2DPointing are each published under two
+# equivalent layouts, and a given dataset revision ships one or the other, so
+# both spellings are accepted and whichever is present is used.
+#
+# The layouts carry identical content and produce identical canonical ids -- EV
+# builds the same 163 ids from either -- so accepting both is safe, not merely
+# convenient. Pinning to a single spelling makes the task unbuildable on any
+# revision that ships the other.
+LOCAL_TASK_MARKER_ANY: Dict[str, List[str]] = {
+    "event_verification": [
+        "data/event_verification/data_jsons/annotations",
+        "data/event_verification/filtered",
+    ],
+    "pointing": [
+        "data/pointing/VANTAGE_2DPointing.jsonl",
+        "data/pointing/Vantage2DPointing.tsv",
     ],
 }
 
@@ -148,9 +167,14 @@ TASK_CONFIG: Dict[str, Dict[str, Any]] = {
         "media_dir": "videos",
         "media_glob": "*.mp4",
         "hf_patterns": [
-            # Public dataset layout: per-group test_annotation*.json + nested
-            # video subtrees, all under filtered/. fnmatch '*' spans '/', so this
-            # single pattern recursively pulls annotations + videos.
+            # Both published layouts. A given revision ships one; the other
+            # simply matches nothing, so requesting both is harmless and keeps
+            # the task buildable either way.
+            "data/event_verification/data_jsons/annotations/*.json",
+            "data/event_verification/videos/*",
+            # Per-group test_annotation*.json + nested video subtrees under
+            # filtered/. fnmatch '*' spans '/', so this single pattern
+            # recursively pulls annotations + videos.
             "data/event_verification/filtered/**",
         ],
     },
@@ -181,6 +205,8 @@ TASK_CONFIG: Dict[str, Dict[str, Any]] = {
         "media_dir": "images_annotated",
         "media_glob": "*",
         "hf_patterns": [
+            # Both published spellings; a revision ships one or the other.
+            "data/pointing/VANTAGE_2DPointing.jsonl",
             "data/pointing/Vantage2DPointing.tsv",
             "data/pointing/images_annotated/*",
         ],
@@ -299,8 +325,9 @@ def _is_valid_local_repo(path: Path, task: Optional[str] = None) -> Tuple[bool, 
     """Validate that `path` is a PhysicalAI-VANTAGE-Bench checkout.
 
     Top-level: must contain data/, README.md, LICENSE.md.
-    Per-task (when `task` given): the post-PR marker paths in LOCAL_TASK_MARKERS
-    must all exist. A stale/pre-PR clone missing a marker fails here with a
+    Per-task (when `task` given): every path in LOCAL_TASK_MARKERS[task] must
+    exist, and at least one of LOCAL_TASK_MARKER_ANY[task] (the equivalent
+    layout alternatives) must exist. A clone missing a marker fails here with a
     clear reason instead of silently serving the wrong layout.
     """
     if not path.is_dir():
@@ -312,6 +339,10 @@ def _is_valid_local_repo(path: Path, task: Optional[str] = None) -> Tuple[bool, 
         for rel in LOCAL_TASK_MARKERS.get(task, []):
             if not (path / rel).exists():
                 return False, f"missing {task} marker: {rel}"
+        alts = LOCAL_TASK_MARKER_ANY.get(task, [])
+        if alts and not any((path / rel).exists() for rel in alts):
+            return False, (f"missing {task} marker: none of "
+                           f"{', '.join(alts)} is present")
     return True, "ok"
 
 
@@ -689,24 +720,39 @@ def _ev_load_items(path: Path) -> List[Dict[str, Any]]:
 def _prep_event_verification(snap_dir: Path, target_dir: Path, opts: Options) -> TaskResult:
     res = TaskResult(task="event_verification", lmu_name="VANTAGE_EventVerification",
                      target_dir=target_dir, status="dry-run")
-    filtered_dir = snap_dir / "data" / "event_verification" / "filtered"
-    if not filtered_dir.exists():
-        raise SystemExit(f"EV filtered dir missing in snapshot: {filtered_dir}")
-    ann_files = sorted(filtered_dir.glob("**/test_annotation*.json"))
-    if not ann_files:
-        raise SystemExit(f"EV: no test_annotation*.json found under {filtered_dir}")
+    # EV is published under two equivalent layouts and a given dataset revision
+    # ships one of them: a flat data_jsons/annotations/*.json, or per-group
+    # test_annotation*.json under filtered/. Both carry the same 163 records and
+    # yield identical canonical ids, so use whichever is present.
+    ev_root = snap_dir / "data" / "event_verification"
+    flat_dir = ev_root / "data_jsons" / "annotations"
+    filtered_dir = ev_root / "filtered"
+    if flat_dir.exists() and sorted(flat_dir.glob("*.json")):
+        ann_files = sorted(flat_dir.glob("*.json"))
+        ann_root = flat_dir
+    elif filtered_dir.exists() and sorted(filtered_dir.glob("**/test_annotation*.json")):
+        ann_files = sorted(filtered_dir.glob("**/test_annotation*.json"))
+        ann_root = filtered_dir
+    else:
+        raise SystemExit(
+            f"EV annotations missing in snapshot. Looked for "
+            f"{flat_dir}/*.json and {filtered_dir}/**/test_annotation*.json"
+        )
 
     rows: List[Dict[str, Any]] = []
     seen: set = set()
-    # Output video filename -> resolved source path. Videos live in nested
-    # per-group subtrees and each annotation's 'video' field is relative to the
-    # directory holding that annotation file.
+    # Output video filename -> resolved source path. Under filtered/, videos sit
+    # in nested per-group subtrees and each annotation's 'video' field is
+    # relative to the directory holding that annotation file. Under the flat
+    # layout they sit in a sibling videos/ dir. Try the annotation-relative path
+    # first, then that sibling, so either layout resolves.
+    flat_videos = ev_root / "videos"
     video_srcs: Dict[str, Path] = {}
     for jf in ann_files:
         items = _ev_load_items(jf)
         if not items:
             continue
-        res.source_files.append(str(jf.relative_to(filtered_dir)))
+        res.source_files.append(str(jf.relative_to(ann_root)))
         group_dir = jf.parent
         for item in items:
             video = item.get("video") or item.get("video_id") or ""
@@ -729,6 +775,12 @@ def _prep_event_verification(snap_dir: Path, target_dir: Path, opts: Options) ->
                 "_id": iid,
             })
             src_video = group_dir / video
+            if not src_video.exists():
+                # Flat layout: videos are in a sibling videos/ dir, not beside
+                # the annotation file.
+                alt = flat_videos / vname
+                if alt.exists():
+                    src_video = alt
             if vname in video_srcs:
                 if video_srcs[vname].resolve() != src_video.resolve():
                     res.notes.append(f"video basename collision: {vname}")
@@ -917,15 +969,27 @@ POINTING_COLUMNS = ["index", "question_id", "image_path", "question", "A", "B", 
 def _prep_pointing(snap_dir: Path, target_dir: Path, opts: Options) -> TaskResult:
     res = TaskResult(task="pointing", lmu_name="VANTAGE_2DPointing",
                      target_dir=target_dir, status="dry-run")
-    tsv_src = snap_dir / "data" / "pointing" / "Vantage2DPointing.tsv"
-    src_images = snap_dir / "data" / "pointing" / "images_annotated"
-    if not tsv_src.exists():
-        raise SystemExit(f"Pointing TSV missing in snapshot: {tsv_src}")
-    res.source_files.append(tsv_src.name)
-
-    # Public dataset ships a TSV already in the target schema (POINTING_COLUMNS).
-    with open(tsv_src, encoding="utf-8") as f:
-        items = list(csv.DictReader(f, delimiter="\t"))
+    # 2DPointing is published in two equivalent forms and a given dataset
+    # revision ships one: a JSONL, or a TSV. Both are already in the target
+    # schema (POINTING_COLUMNS) and differ only in encoding, so read whichever
+    # is present rather than pinning to one spelling.
+    pointing_dir = snap_dir / "data" / "pointing"
+    jsonl_src = pointing_dir / "VANTAGE_2DPointing.jsonl"
+    tsv_src = pointing_dir / "Vantage2DPointing.tsv"
+    src_images = pointing_dir / "images_annotated"
+    if jsonl_src.exists():
+        src = jsonl_src
+        items = _load_jsonl(jsonl_src)
+    elif tsv_src.exists():
+        src = tsv_src
+        with open(tsv_src, encoding="utf-8") as f:
+            items = list(csv.DictReader(f, delimiter="\t"))
+    else:
+        raise SystemExit(
+            f"Pointing annotations missing in snapshot. Looked for "
+            f"{jsonl_src} and {tsv_src}"
+        )
+    res.source_files.append(src.name)
     rows: List[Dict[str, Any]] = []
     missing_images: List[str] = []
     for i, item in enumerate(items):
@@ -1367,9 +1431,29 @@ PREP_FNS: Dict[str, Callable[..., TaskResult]] = {
 }
 
 
+def _hf_pattern_hits(opts: Options, patterns: List[str]) -> Dict[str, int]:
+    """How many repo files each hf_pattern matches.
+
+    Metadata only -- one list_repo_files call, no download. `allow_patterns` uses
+    fnmatch, where '*' spans '/', so this mirrors what a real run would fetch.
+    """
+    import fnmatch
+    from huggingface_hub import HfApi
+
+    files = HfApi().list_repo_files(
+        opts.hf_repo, repo_type="dataset", token=opts.hf_token or None)
+    return {p: sum(1 for f in files if fnmatch.fnmatch(f, p)) for p in patterns}
+
+
 def _dry_run_plan(task: str, target_dir: Path, opts: Options,
                   source_mode: str, source_root: Optional[Path]) -> TaskResult:
-    """Pure dry-run summary. No disk writes. For hf mode no download happens."""
+    """Dry-run summary. No disk writes and no download.
+
+    For hf mode this VERIFIES that the task's patterns actually match files in
+    the dataset. Reporting the patterns without checking them makes a dry-run
+    that cannot fail, which is worse than no check at all: a task whose layout
+    has moved reports "ok" here and only fails on the real run.
+    """
     cfg = TASK_CONFIG[task]
     res = TaskResult(
         task=task,
@@ -1384,7 +1468,18 @@ def _dry_run_plan(task: str, target_dir: Path, opts: Options,
                          f"(no HF download)")
     else:
         res.notes.append(f"source: hf:{opts.hf_repo}")
-        res.notes.append(f"would download HF patterns: {cfg['hf_patterns']}")
+        try:
+            hits = _hf_pattern_hits(opts, cfg["hf_patterns"])
+            for pat, n in hits.items():
+                res.notes.append(f"pattern {pat} -> {n} file(s)")
+            if not any(hits.values()):
+                res.status = "failed"
+                res.notes.append(
+                    "no dataset file matches any pattern for this task — the "
+                    "published layout does not match what this script expects")
+        except Exception as e:  # noqa: BLE001 - a preflight must not hard-fail
+            res.notes.append(f"could not verify patterns ({type(e).__name__}); "
+                             f"would download: {cfg['hf_patterns']}")
     if task == "astro2d":
         res.notes.append(f"would flatten sequence_{{a,b,c}}/images -> {target_dir}/images/")
         res.notes.append(f"would emit empty placeholder labels at {target_dir}/labels/ (no-GT)")
