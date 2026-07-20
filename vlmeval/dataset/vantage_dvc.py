@@ -268,7 +268,13 @@ class VANTAGE_DVC(VideoBaseDataset):
             try:
                 import torch
                 from bert_score import BERTScorer
-                bert_scorer = BERTScorer(model_type="roberta-large", device="cpu")
+                # Prefer the job's GPU when one is allocated (a low-tier card is
+                # ample for roberta-large); VANTAGE_BERT_DEVICE overrides, and a
+                # GPU-less job falls back to CPU automatically.
+                bert_device = os.environ.get("VANTAGE_BERT_DEVICE") or (
+                    "cuda" if torch.cuda.is_available() else "cpu")
+                print(f"BERTScore device: {bert_device}")
+                bert_scorer = BERTScorer(model_type="roberta-large", device=bert_device)
             except ImportError:
                 print("Warning: bert_score not available, using dummy (F1=0.5). pip install bert-score")
         def bert_remote(cands, refs):
