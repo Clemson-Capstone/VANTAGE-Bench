@@ -769,10 +769,19 @@ class VANTAGE_2DGroundingDataset(ImageBaseDataset):
         parse_fail_count = 0
         invalid_box_count = 0
 
+        # Coordinate convention the model emits boxes in (from the submission
+        # metadata via the adapter). Gemini emits yxyx across ALL formats (box_2d,
+        # bbox_2d, plain [[...]] lists); parse_bbox_from_text extracts them verbatim,
+        # so we swap yxyx -> xyxy here uniformly instead of transposing. Default
+        # 'xyxy' leaves non-Gemini models unchanged.
+        _coord_yxyx = str(judge_kwargs.get('box_coord_order', 'xyxy')).lower() == 'yxyx'
+
         for idx, row in data.iterrows():
             # Parse prediction
             pred_text = str(row.get('prediction', ''))
             pred_bbox = parse_bbox_from_text(pred_text)
+            if _coord_yxyx:
+                pred_bbox = [[b[1], b[0], b[3], b[2]] for b in pred_bbox if len(b) >= 4]
             if len(pred_bbox) == 0 and pred_text.strip() not in ('', 'nan'):
                 parse_fail_count += 1
 

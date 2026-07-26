@@ -280,15 +280,21 @@ def infer_data_job(
         if dataset_name.startswith('VANTAGE_2DGrounding'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(data, model_name, submission_path, task='grounding')
+            emit_submission(
+                data, model_name, submission_path, task='grounding',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('VANTAGE_2DPointing'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(data, model_name, submission_path, task='pointing')
+            emit_submission(
+                data, model_name, submission_path, task='pointing',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('Astro2D'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(data, model_name, submission_path, task='astro')
+            emit_submission(
+                data, model_name, submission_path, task='astro',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
     if world_size > 1:
         dist.barrier()
     return model

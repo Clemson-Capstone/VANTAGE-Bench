@@ -176,7 +176,10 @@ class Astro2DDetectionDataset(ImageBaseDataset):
         if data_root is None:
             # Try to load from datasets.yaml
             dataset_cfg = load_dataset_config(dataset) or {}
-            if dataset_cfg and 'data_root' in dataset_cfg:
+            # Only fall back to the yaml's hardcoded data_root when the LMUDataRoot()
+            # resolution above did not yield one; otherwise the yaml's '~/LMUData/...'
+            # would clobber the LMUData env (e.g. the GT-source copy) set for the run.
+            if self.data_root is None and dataset_cfg and 'data_root' in dataset_cfg:
                 self.data_root = dataset_cfg['data_root']
         else:
             dataset_cfg = load_dataset_config(dataset) or {}
@@ -485,12 +488,20 @@ class Astro2DDetectionDataset(ImageBaseDataset):
                 logger.error(f"Failed to load image {image_path}: {e}")
                 width, height = 640, 480
 
+            # Coordinate convention the model emits boxes in (from the submission
+            # metadata via the adapter). Gemini emits yxyx across ALL formats/keys
+            # ('box_2d' as well as 'bbox_2d'/'bbox' and plain lists), not just the
+            # 'box_2d' key; when yxyx, swap every prediction to xyxy. Default 'xyxy'
+            # preserves the legacy behavior (only the box_2d key swapped).
+            _coord_yxyx = str(judge_kwargs.get('box_coord_order', 'xyxy')).lower() == 'yxyx'
             # Normalize prediction format
             pred_boxes = []
             for pred in pred_boxes_raw:
                 if isinstance(pred, (list, tuple)):
                     # Plain [x1, y1, x2, y2] coordinate list
                     bbox = _normalize_pred_bbox(pred, sample_id=idx)
+                    if bbox is not None and _coord_yxyx:
+                        bbox = [bbox[1], bbox[0], bbox[3], bbox[2]]
                     if bbox is not None:
                         bbox = scale_bbox(bbox, height, width, scale_factor=1000)
                     if bbox is not None and len(bbox) >= 4:
@@ -514,8 +525,9 @@ class Astro2DDetectionDataset(ImageBaseDataset):
                         bbox = _normalize_pred_bbox(bbox, sample_id=idx)
                     if bbox is not None:
                         # Gemini's native 'box_2d' is [y1, x1, y2, x2] in 0-1000 space;
-                        # scale_bbox expects [x1, y1, x2, y2], so swap axes.
-                        if key == 'box_2d':
+                        # scale_bbox expects [x1, y1, x2, y2], so swap axes. In yxyx mode
+                        # every key is yxyx (Gemini ignores the requested order).
+                        if key == 'box_2d' or _coord_yxyx:
                             bbox = [bbox[1], bbox[0], bbox[3], bbox[2]]
                         bbox = scale_bbox(bbox, height, width, scale_factor=1000)
 
