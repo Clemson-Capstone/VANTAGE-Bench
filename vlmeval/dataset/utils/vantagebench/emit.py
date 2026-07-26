@@ -167,7 +167,8 @@ _TASK_SPECS: dict[str, EmitSpec] = {
 # Shared entrypoint
 # ---------------------------------------------------------------------------
 
-def emit_submission(meta_df, model_name, out_path, *, task, dataset=None):
+def emit_submission(meta_df, model_name, out_path, *, task, dataset=None,
+                    box_coord_order='xyxy'):
     """Emit a canonical submission JSONL for ``task`` from a meta DataFrame.
 
     Parameters
@@ -231,6 +232,10 @@ def emit_submission(meta_df, model_name, out_path, *, task, dataset=None):
                 ],
                 "metadata": {
                     "model": model_name,
+                    # Coordinate order the model emits 2D boxes in ('xyxy' or 'yxyx').
+                    # Read by the grounding/astro/SOT evaluators so yxyx models (Gemini)
+                    # are scored with a swap instead of a transposition.
+                    "box_coord_order": box_coord_order,
                     "extra": {},
                 },
             })

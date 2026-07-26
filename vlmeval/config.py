@@ -322,6 +322,15 @@ api_models = {
     "GeminiFlash3-1-Lite": partial(
         Gemini, model="gemini-3.1-flash-lite", temperature=0, retry=10
     ),
+    # max_tokens raised to 16384 (both models' outputTokenLimit is 65536): 3.x are
+    # thinking models whose thought tokens draw from the same output budget, so the
+    # 2048 default truncates the JSON-heavy tasks (DVC/Temporal/SOT/grounding/astro).
+    "GeminiFlash3-6": partial(
+        Gemini, model="gemini-3.6-flash", temperature=0, retry=10, max_tokens=16384
+    ),
+    "GeminiFlash3-5-Lite": partial(
+        Gemini, model="gemini-3.5-flash-lite", temperature=0, retry=10, max_tokens=16384
+    ),
 
     # Qwen-VL
     "QwenVLPlus": partial(QwenVLAPI, model="qwen-vl-plus", temperature=0, retry=10),

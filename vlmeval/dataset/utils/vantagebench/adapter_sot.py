@@ -145,8 +145,13 @@ def evaluate_sot_submission(
     ds = VANTAGE_SOT.__new__(VANTAGE_SOT)
     ds.verbose = False
     # __init__ (bypassed by __new__) normally sets this; evaluate() ->
-    # parse_sot_response reads it. 'cr' is the neutral default (no gemini y/x swap).
-    ds.model_family = 'cr'
+    # parse_sot_response reads it. Derive the coordinate convention from the
+    # submission metadata (emit records box_coord_order) so a yxyx model (Gemini)
+    # gets the y/x swap and an xyxy model does not. Falls back to 'cr' (no swap).
+    _order = 'xyxy'
+    if submission and isinstance(submission[0], dict):
+        _order = submission[0].get('metadata', {}).get('box_coord_order', 'xyxy')
+    ds.model_family = 'gemini' if _order == 'yxyx' else 'cr'
     ds._gt_cache = _build_synthetic_gt_cache(private_gt)
     # data is not consulted by evaluate(); placeholder for inherited helpers.
     ds.data = pd.DataFrame([])

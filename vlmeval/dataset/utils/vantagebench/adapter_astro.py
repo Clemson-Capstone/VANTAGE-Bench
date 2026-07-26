@@ -167,6 +167,11 @@ def evaluate_astro_submission(
 
     validate_submission(submission, private_gt, task='astro')
 
+    # Coordinate convention the predictions were emitted in (yxyx for Gemini).
+    # Forwarded to evaluate() so it swaps yxyx boxes to xyxy instead of transposing.
+    _order = submission[0].get('metadata', {}).get('box_coord_order', 'xyxy') if submission else 'xyxy'
+    judge_kwargs.setdefault('box_coord_order', _order)
+
     cleanup_dir = None
     if work_dir is None:
         work_dir = tempfile.mkdtemp(prefix='vantage_ol_eval_')

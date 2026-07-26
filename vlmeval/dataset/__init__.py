@@ -104,11 +104,28 @@ from .oceanocr import OceanOCRBench
 from .matbench import MATBench
 
 from .reasonmap_plus import ReasonMap_Plus
-from .hipho import HiPhODataset
+# Optional datasets with heavy / conflicting deps (e.g. hipho -> math_verify ->
+# antlr 4.13, which clashes with omegaconf's antlr 4.9). They are unrelated to the
+# core benchmarks; make their import non-fatal so a missing/incompatible dep does
+# not break `import vlmeval` for everyone. Unavailable ones become None and are
+# filtered out of DATASET_CLASSES below.
+try:
+    from .hipho import HiPhODataset
+except Exception as e:  # noqa: F841, BLE001
+    warnings.warn(f'Optional dataset HiPhODataset unavailable: {e}')
+    HiPhODataset = None
 from .gsm8k_v import GSM8KVDataset
 from .macbench import MaCBench
-from .sarena_mini import SArena_MINI
-from .uni_svg import UniSVG
+try:
+    from .sarena_mini import SArena_MINI
+except Exception as e:  # noqa: F841, BLE001
+    warnings.warn(f'Optional dataset SArena_MINI unavailable: {e}')
+    SArena_MINI = None
+try:
+    from .uni_svg import UniSVG
+except Exception as e:  # noqa: F841, BLE001
+    warnings.warn(f'Optional dataset UniSVG unavailable: {e}')
+    UniSVG = None
 
 
 class ConcatDataset(ImageBaseDataset):
@@ -268,6 +285,8 @@ CUSTOM_DATASET = [
 DATASET_COLLECTION = [ConcatDataset, ConcatVideoDataset]
 
 DATASET_CLASSES = IMAGE_DATASET + VIDEO_DATASET + TEXT_DATASET + CUSTOM_DATASET + DATASET_COLLECTION  # noqa: E501
+# Drop optional datasets whose import failed (registered as None above).
+DATASET_CLASSES = [c for c in DATASET_CLASSES if c is not None]
 SUPPORTED_DATASETS = []
 for DATASET_CLS in DATASET_CLASSES:
     SUPPORTED_DATASETS.extend(DATASET_CLS.supported_datasets())

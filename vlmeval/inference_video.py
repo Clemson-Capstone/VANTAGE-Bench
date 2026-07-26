@@ -269,22 +269,31 @@ def infer_data_job_video(
         if dataset_name.startswith('VANTAGE_VQA'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(meta, model_name, submission_path, task='vqa')
+            emit_submission(
+                meta, model_name, submission_path, task='vqa',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('VANTAGE_EventVerification'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(meta, model_name, submission_path, task='event_verification')
+            emit_submission(
+                meta, model_name, submission_path, task='event_verification',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('VANTAGE_Temporal'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(meta, model_name, submission_path, task='temporal')
+            emit_submission(
+                meta, model_name, submission_path, task='temporal',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('VANTAGE_DVC'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
-            emit_submission(meta, model_name, submission_path, task='dvc')
+            emit_submission(
+                meta, model_name, submission_path, task='dvc',
+                box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
         if dataset_name.startswith('VANTAGE_SOT'):
             from vlmeval.dataset.utils.vantagebench.emit import emit_submission
             submission_path = osp.splitext(result_file)[0] + '.submission.jsonl'
             # SOT requires dataset for canonical id resolution from _gt_cache.
-            emit_submission(meta, model_name, submission_path, task='sot', dataset=dataset)
+            emit_submission(meta, model_name, submission_path, task='sot', dataset=dataset,
+                            box_coord_order=getattr(model, 'box_coord_order', 'xyxy'))
     return model

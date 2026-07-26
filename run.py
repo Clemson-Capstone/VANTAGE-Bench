@@ -85,7 +85,13 @@ def build_dataset_from_config(cfg, dataset_name):
         cls = getattr(vlmeval.dataset, cls_name)
         sig = inspect.signature(cls.__init__)
         valid_params = {k: v for k, v in config.items() if k in sig.parameters}
-        if cls.MODALITY == 'VIDEO':
+        # Enforce fps/nframe only for VIDEO datasets whose frame count is actually
+        # controlled by them. Datasets that pre-sample frames (they expose
+        # 'clip_frames', e.g. VANTAGE_SOT) accept fps/nframe only vestigially and
+        # would otherwise be impossible to launch from a config.
+        _has_frame_ctrl = 'fps' in sig.parameters or 'nframe' in sig.parameters
+        _presampled = 'clip_frames' in sig.parameters
+        if cls.MODALITY == 'VIDEO' and _has_frame_ctrl and not _presampled:
             if valid_params.get('fps', 0) > 0 and valid_params.get('nframe', 0) > 0:
                 raise ValueError('fps and nframe should not be set at the same time')
             if valid_params.get('fps', 0) <= 0 and valid_params.get('nframe', 0) <= 0:

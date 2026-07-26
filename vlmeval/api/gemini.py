@@ -7,6 +7,12 @@ headers = 'Content-Type: application/json'
 class GeminiWrapper(BaseAPI):
 
     is_api: bool = True
+    # Gemini emits 2D box coordinates in yxyx (its native order), e.g. box_2d =
+    # [ymin, xmin, ymax, xmax] normalized 0-1000, including plain [[...]] lists. This
+    # is recorded in the submission metadata at emit time so the VANTAGE grounding/
+    # astro/SOT evaluators can swap to xyxy instead of transposing every box. Models
+    # that emit xyxy leave this at the BaseModel/BaseAPI default of 'xyxy'.
+    box_coord_order: str = 'yxyx'
 
     def __init__(self,
                  model: str = 'gemini-1.0-pro',
@@ -39,7 +45,9 @@ class GeminiWrapper(BaseAPI):
         if self.media_resolution:
             assert self.media_resolution in ['low', 'medium', 'high']
         if key is None:
-            key = os.environ.get('GOOGLE_API_KEY', None)
+            # Accept GEMINI_API_KEY as a fallback: the native SDK env var is
+            # GOOGLE_API_KEY, but keys are commonly stored as GEMINI_API_KEY.
+            key = os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY')
         # Try to load backend from environment variable
         be = os.environ.get('GOOGLE_API_BACKEND', None)
         if be is not None and be in ['genai', 'vertex']:
