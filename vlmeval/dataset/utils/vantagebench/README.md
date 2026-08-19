@@ -12,8 +12,9 @@ When `dataset.evaluate(result_file)` is called, it calls `emit_submission(data, 
 2. Resolves a canonical submission ID for each row using the task-specific `id_resolver`.
 3. Writes one JSON record per row to the output JSONL:
    ```json
-   {"id": "<canonical-id>", "task": "<task-key>", "conversations": [{"role": "assistant", "content": "<prediction>"}], "metadata": {}}
+   {"id": "<canonical-id>", "task": "<canonical-task-string>", "conversations": [{"from": "assistant", "value": "<prediction>"}], "metadata": {"model": "<model-name>", "box_coord_order": "xyxy", "extra": {}}}
    ```
+   Note: the `task=` kwarg passed *into* `emit_submission()` is the short key (`'vqa'`, `'temporal'`, ...), but the `task` field *written* into each record is a longer canonical string looked up from `_TASK_SPECS` (e.g. `'video_qa'` for vqa) — see Output format below.
 4. Never raises — any error is converted to a `warnings.warn` so the prediction xlsx is always written even if emission fails.
 
 ---
@@ -60,13 +61,13 @@ Each line in `*_submission.jsonl` is one JSON object:
 
 ```json
 {
-  "id": "vqa_<index>",
-  "task": "vqa",
+  "id": "C0065_clip01__q_000042",
+  "task": "video_qa",
   "conversations": [
-    {"role": "assistant", "content": "B"}
+    {"from": "assistant", "value": "B"}
   ],
-  "metadata": {}
+  "metadata": {"model": "MyModel", "box_coord_order": "xyxy", "extra": {}}
 }
 ```
 
-The `id` format is task-specific and defined in `id_rules.py`. The leaderboard server uses `id` to match predictions against withheld ground truth.
+The `id` format is task-specific and defined in `id_rules.py`. The leaderboard server uses `id` to match predictions against withheld ground truth. The `task` field is the canonical string from `_TASK_SPECS` in `emit.py` (`video_qa`, `event_verification`, `temporal_grounding`, `dense_video_captioning`, `single_object_tracking`, `referring_expressions`, `spatial_pointing`, `object_localization`), not the short key used when calling `emit_submission(task=...)`.
