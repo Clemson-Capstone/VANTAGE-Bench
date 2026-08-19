@@ -89,12 +89,12 @@ Go to [https://vantage-bench.org/submit](https://vantage-bench.org/submit) and c
 | Section | Fields |
 |---------|--------|
 | **Identity** | Leaderboard name, Organization, Model card / paper URL, Contact email |
-| **Submission type** | Single model vs. system pipeline; open-weight / mixed / proprietary |
+| **Submission type** | Evaluation track (Public / Preview); Single model vs. system pipeline; open-weight / mixed / proprietary |
 | **Model configuration** | Checkpoint, parameter count, precision, zero-shot vs. fine-tuned |
 | **Inference setup** | Infrastructure, official harness used, additional hyperparameters |
 | **Pillars submitted** | Select each pillar you are submitting |
 | **Predictions file** | Upload `submission.tar.gz` (max 500 MB) |
-| **Acknowledgements** | Confirm four statements |
+| **Acknowledgements** | Confirm five statements (submission accuracy, reproducibility, and term agreement — confirm exact wording on the live form before submitting) |
 
 ---
 

@@ -2,6 +2,8 @@
 
 Scripts in this folder fall into two groups: **participant tools** (used when running the benchmark) and **internal/dev tools** (used to manage infra or debug).
 
+> **Looking for the higher-level workflow?** [`../skills/README.md`](../skills/README.md) has agent-driven playbooks that orchestrate these scripts together (data prep → inference → validation → packaging) end to end.
+
 ---
 
 ## Participant tools
@@ -31,6 +33,36 @@ python scripts/run_lmudata.py --all --lmu-root ~/LMUData
 ```
 
 See [`RUN_LMUData.md`](RUN_LMUData.md) for the full guide: prerequisites (ffmpeg, gdown), per-task flags, troubleshooting, and copy vs. symlink modes.
+
+---
+
+### `preflight_check.py`
+
+Checks that the environment is ready to run inference before you start: GPU availability, disk space, ffmpeg, HF token, and network reachability. Exits non-zero on any blocking issue.
+
+```bash
+python scripts/preflight_check.py --lmu-root ~/LMUData [--json]
+```
+
+---
+
+### `validate_submission.py`
+
+Validates `*_submission.jsonl` files (or a built `.tar.gz`) before upload: JSONL schema, canonical id format, duplicate ids, pillar completeness, and empty/failed predictions. Written to guard against `emit_submission()` silently swallowing errors.
+
+```bash
+python scripts/validate_submission.py --work-dir ./outputs/<model>/<eval_id> --lmu-root ~/LMUData [--json]
+```
+
+---
+
+### `run_manifest.py`
+
+Generates `run_manifest.json` (run provenance: git commit, package versions, GPU, dataset keys, per-task counts) and `form_metadata.md` (a draft of every field on the submission portal) from a completed output directory.
+
+```bash
+python scripts/run_manifest.py --work-dir ./outputs/<model>/<eval_id> [--json]
+```
 
 ---
 

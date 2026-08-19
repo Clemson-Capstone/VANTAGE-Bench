@@ -642,6 +642,7 @@ vlmeval/
 
 | Document | What it covers |
 |----------|---------------|
+| [`skills/README.md`](skills/README.md) | Agentic skills — markdown playbooks that let a coding agent run the full participant pipeline (data prep → inference → validation → packaging) end to end |
 | [`SUBMISSION.md`](SUBMISSION.md) | Quick submission reference: 3-step flow, pillar table, packaging, form fields |
 | [`docs/vantage/SUBMISSION.md`](docs/vantage/SUBMISSION.md) | Full submission guide: JSONL record format, canonical IDs, troubleshooting |
 | [`docs/vantage/DEVELOPER_GUIDE.md`](docs/vantage/DEVELOPER_GUIDE.md) | File-to-file map, all CLI flags, all env vars, model registration paths |

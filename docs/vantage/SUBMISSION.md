@@ -102,12 +102,12 @@ Go to **https://vantage-bench.org/submit** and complete the seven sections:
 | Section | Fields |
 |---------|--------|
 | **Identity** | Candidate name (leaderboard display name), Organization, Model card / paper URL, Contact email |
-| **Submission type** | Pipeline type (Single model / System pipeline), System access type (Fully open-weight / Mixed / Proprietary) |
+| **Submission type** | Evaluation track (Public / Preview), Pipeline type (Single model / System pipeline), System access type (Fully open-weight / Mixed / Proprietary) |
 | **Model configuration** | Primary model / checkpoint, Parameter count, Inference precision, Training type (Zero-shot / Fine-tuned) |
 | **Inference setup** | Primary inference infrastructure, Official harness used (Yes / No), Additional hyperparameters |
 | **Pillars submitted** | Select the pillars you are submitting (at least one) |
 | **Predictions file** | Upload `submission.tar.gz` (max 500 MB) |
-| **Acknowledgements** | Confirm four statements before submitting |
+| **Acknowledgements** | Confirm five statements before submitting (topics include submission accuracy, reproducibility, and term agreement — confirm exact wording on the live form) |
 
 ---
 
@@ -118,13 +118,20 @@ Each line in a task's `.jsonl` is:
 ```json
 {
   "id": "<canonical-id>",
-  "task": "<task-key>",
-  "conversations": [{"role": "assistant", "content": "<raw-model-output>"}],
-  "metadata": {}
+  "task": "<canonical-task-string>",
+  "conversations": [{"from": "assistant", "value": "<raw-model-output>"}],
+  "metadata": {"model": "<model-name>", "box_coord_order": "xyxy", "extra": {}}
 }
 ```
 
-The canonical ID format is task-specific and generated automatically by the harness:
+This is emitted by `emit_submission()` in `vlmeval/dataset/utils/vantagebench/emit.py` — do not
+hand-roll this format; use the harness. Note the conversation turn uses `from`/`value` (not
+`role`/`content`), and `metadata` is not empty — it always carries `model` and
+`box_coord_order` (read by the grounding/astro/SOT evaluators to handle models, like Gemini,
+that emit boxes in `yxyx` order instead of `xyxy`).
+
+The canonical ID format is task-specific and generated automatically by the harness (source of
+truth: `vlmeval/dataset/utils/vantagebench/id_rules.py`):
 
 | Task | ID format | Example |
 |------|-----------|---------|
@@ -132,12 +139,16 @@ The canonical ID format is task-specific and generated automatically by the harn
 | EventVerification | `{video_stem}__ev_{index:06d}` | `C0065_clip01__ev_000007` |
 | Temporal | `{video_stem}__tg_{index:06d}` | `C0065_clip01__tg_000013` |
 | DVC | `{video_stem}__dvc_{index:06d}` | `C0065_clip01__dvc_000001` |
-| SOT | `{seq_dir_name}` | `Warehouse_000__Camera_0003__obj37` |
+| SOT | `{scene}__{camera}_{init_frame:07d}__obj{id}` | `Warehouse_000__Camera_0003_0005648__obj37` |
 | 2DGrounding | `{image_stem}__rx_{index:06d}` | `frame_0042__rx_000003` |
 | 2DPointing | `{image_stem}__sp_{index:06d}` | `000000_000000__sp_000099` |
 | Astro2D | `{image_stem}__ol_{index:06d}` | `IVA_frame_0001__ol_000000` |
 
-The `task` field in each record is the canonical short key: `vqa`, `event_verification`, `temporal`, `dvc`, `sot`, `grounding`, `pointing`, `astro`.
+The `task` field in each record is the **canonical task string**, which is longer than the
+short key used for filenames/pillars: `video_qa`, `event_verification`, `temporal_grounding`,
+`dense_video_captioning`, `single_object_tracking`, `referring_expressions`,
+`spatial_pointing`, `object_localization` (mapped from the short keys `vqa`,
+`event_verification`, `temporal`, `dvc`, `sot`, `grounding`, `pointing`, `astro` respectively).
 
 ---
 
