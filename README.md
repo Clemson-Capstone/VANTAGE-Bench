@@ -15,6 +15,7 @@ This repository is a fork of [VLMEvalKit](https://github.com/open-compass/VLMEva
 - [End-to-End Flow](#end-to-end-flow)
 - [Benchmarks](#benchmarks)
 - [Installation](#installation)
+- [Palmetto setup](#palmetto-setup)
 - [Dataset Setup](#dataset-setup)
 - [Running Evaluations](#running-evaluations)
 - [Submission Workflow](#submission-workflow)
@@ -213,6 +214,57 @@ pip install vllm
 > `MMMU_TEST` / `MMT-Bench_ALL` datasets). The `.gitignore` `result*` rule is anchored
 > (`/result*`, `*.result`) specifically so it does **not** exclude that source file; do not
 > revert it to a bare `result*`.
+
+> **ANTLR dependency note.** The base environment uses
+> `antlr4-python3-runtime==4.9.3`, as required by OmegaConf. The optional
+> HiPhO benchmark's `math-verify` dependency requires ANTLR 4.13, so run
+> that benchmark in a separate environment; installing both into the base
+> environment makes pip dependency resolution fail.
+
+---
+
+## Palmetto setup
+
+On Clemson Palmetto, the login shell defaults to GCC 8.5.0. Load a newer GCC
+module before installing packages with native extensions, and use the same
+module when running the environment. The commands below use GCC 12.3.0,
+which is available on Palmetto. Run the installation in a Slurm allocation,
+not on a login node.
+
+```bash
+# From the repository root:
+srun --partition=interact --cpus-per-task=4 --mem=16G --time=01:30:00 --pty bash
+module load gcc/12.3.0 miniforge3/24.3.0-0
+export VANTAGE_SCRATCH="/scratch/$(id -un)/VANTAGE-Bench"
+export CONDA_PKGS_DIRS="$VANTAGE_SCRATCH/cache/conda-pkgs"
+export PIP_CACHE_DIR="$VANTAGE_SCRATCH/cache/pip"
+export HF_HOME="$VANTAGE_SCRATCH/cache/huggingface"
+mkdir -p "$CONDA_PKGS_DIRS" "$PIP_CACHE_DIR" "$HF_HOME" "$VANTAGE_SCRATCH/runs"
+conda create -p "$VANTAGE_SCRATCH/envs/vantage" python=3.10 ffmpeg -c conda-forge -y
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate "$VANTAGE_SCRATCH/envs/vantage"
+python -m pip install -r requirements.txt
+python -m pip install -e .
+python -c 'from vlmeval.config import supported_VLM; print(len(supported_VLM))'
+```
+
+For later jobs, load the same modules and activate the environment by its
+full path; repeat the cache exports in each new shell. Put `LMUData`,
+downloaded models, and `--work-dir` outputs under `$VANTAGE_SCRATCH`;
+Palmetto scratch is temporary and is not backed up. For dataset preparation,
+use `--lmu-root "$VANTAGE_SCRATCH/LMUData"`, then set
+`export LMUData="$VANTAGE_SCRATCH/LMUData"` for `run.py`.
+Keep only selected final results on persistent storage. Before inference, run
+the preflight check inside an allocation:
+
+```bash
+python scripts/preflight_check.py \
+  --lmu-root "$VANTAGE_SCRATCH/LMUData" \
+  --work-dir "$VANTAGE_SCRATCH/runs"
+```
+
+The generic `scripts/srun.sh` requests eight GPUs and 64 CPUs, so use a
+resource request matched to your model instead of that wrapper for small runs.
 
 ---
 
