@@ -8,10 +8,12 @@ The adapter:
    supported parameter that skips super().__init__() and the TSV disk read).
 4. Assigns a synthetic self.data carrying exactly the columns the existing
    evaluate() reads (index, video, category, answer).
-5. Builds a synthetic prediction DataFrame, dumps it as xlsx to a temp path.
-6. Calls the existing, UNCHANGED dataset.evaluate(temp_xlsx, **judge_kwargs).
+5. Builds a synthetic prediction DataFrame, dumps it as pkl to a temp path
+   (not xlsx: the xlsx cell format truncates any cell over 32767 chars,
+   which real DVC predictions routinely exceed; pkl round-trips exactly).
+6. Calls the existing, UNCHANGED dataset.evaluate(temp_pkl, **judge_kwargs).
 
-Score parity with the legacy xlsx path is structural: the parser sees the
+Score parity with the legacy path is structural: the parser sees the
 same raw bytes (the assistant.value string), the evaluator sees the same
 DataFrame columns it reads today, and the downstream metric functions
 (parse_events_from_json, parse_timestamp, _iou, _chased_dp_assignment,
@@ -126,7 +128,12 @@ def evaluate_dvc_submission(
         work_dir = tempfile.mkdtemp(prefix='vantage_dvc_eval_')
         cleanup_dir = work_dir
     os.makedirs(work_dir, exist_ok=True)
-    tmp_pred_path = osp.join(work_dir, '_dvc_submission_pred.xlsx')
+    # pkl (not xlsx): vlmeval.smp.file.dump's xlsx writer truncates any cell
+    # over 32767 characters (the xlsxwriter/Excel cell limit). Real DVC
+    # predictions routinely run 40-70k characters and were getting truncated
+    # mid-JSON before parsing. pickle round-trips the DataFrame exactly, with
+    # no such limit; dump()/load() in vlmeval/smp/file.py both handle '.pkl'.
+    tmp_pred_path = osp.join(work_dir, '_dvc_submission_pred.pkl')
     dump(pred_df, tmp_pred_path)
 
     try:

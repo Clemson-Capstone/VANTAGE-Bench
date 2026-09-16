@@ -166,7 +166,20 @@ class VANTAGE_DVC(VideoBaseDataset):
         return msgs
 
     @staticmethod
-    def parse_timestamp(ts_str) -> float:
+    def parse_timestamp(ts_str):
+        """Parse a timestamp-ish value into seconds.
+
+        Returns 0.0 for None/empty input (existing behavior other callers
+        rely on) and None for anything that genuinely cannot be parsed --
+        callers must check for None and drop the event rather than treat it
+        as time zero. Beyond the canonical 'ss', 'mm:ss' and 'hh:mm:ss'
+        forms (kept byte-identical for well-formed input), this also
+        tolerates a handful of real-world model output formats: trailing
+        unit suffixes ('4.72s' / '4.72 sec' / '4.72 seconds'), compound
+        durations ('1m5s', '2h3m4s'), a comma decimal separator
+        ('00:00:04,720'), and a 'start - end' range (the first endpoint is
+        used).
+        """
         if ts_str is None:
             return 0.0
         if isinstance(ts_str, (int, float)):
@@ -174,16 +187,51 @@ class VANTAGE_DVC(VideoBaseDataset):
         ts_str = str(ts_str).strip()
         if not ts_str:
             return 0.0
+
+        # A range like "00:04.72 - 00:09.31": use the first endpoint.
+        if ' - ' in ts_str:
+            ts_str = ts_str.split(' - ')[0].strip()
+
         if ':' in ts_str:
+            # SRT-style comma decimal separator, e.g. "00:00:04,720".
+            if ',' in ts_str:
+                ts_str = ts_str.replace(',', '.')
             parts = ts_str.split(':')
-            if len(parts) == 2:
-                return float(parts[0]) * 60 + float(parts[1])
-            elif len(parts) == 3:
-                return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
-        return float(ts_str)
+            try:
+                if len(parts) == 2:
+                    return float(parts[0]) * 60 + float(parts[1])
+                elif len(parts) == 3:
+                    return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+                elif len(parts) == 4:
+                    # "hh:mm:ss:ff" (frames). There is no reliable fps to
+                    # convert the frame count with here, so it is dropped;
+                    # only whole hh:mm:ss precision is recovered.
+                    return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+            except ValueError:
+                return None
+            return None
+
+        # Compound duration, e.g. "1m5s", "2h3m4s".
+        m = re.match(r'^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?$', ts_str, re.IGNORECASE)
+        if m and any(m.groups()):
+            hours, minutes, seconds = (float(g) if g else 0.0 for g in m.groups())
+            return hours * 3600 + minutes * 60 + seconds
+
+        # Trailing unit words not covered above, e.g. "4.72 sec" / "4.72 seconds"
+        # (bare "4.72s" is already matched by the compound-duration pattern).
+        m2 = re.match(r'^(\d+(?:\.\d+)?)\s*(?:seconds|second|secs|sec)$', ts_str, re.IGNORECASE)
+        if m2:
+            return float(m2.group(1))
+
+        try:
+            return float(ts_str)
+        except ValueError:
+            return None
 
     @staticmethod
-    def parse_events_from_json(text: str) -> List[Dict]:
+    def parse_events_from_json(text) -> List[Dict]:
+        if not isinstance(text, str):
+            text = ''
         text = text.strip()
         m = re.search(r'\[[\s\S]*\]', text)
         if m:
@@ -216,7 +264,7 @@ class VANTAGE_DVC(VideoBaseDataset):
         print(f"Submission written to: {submission_path}")
 
         if 'answer' not in self.data.columns:
-            return {}
+            return {'soda_c': 0.0, 'miou': 0.0, 'iou_f1': 0.0, 'bertscore_f1': 0.0}
 
         preds = {}
         gts = {}
@@ -231,8 +279,12 @@ class VANTAGE_DVC(VideoBaseDataset):
             pred_events = self.parse_events_from_json(row.get('prediction', ''))
             pred_list = []
             for pe in pred_events:
+                if not isinstance(pe, dict):
+                    continue
                 start = self.parse_timestamp(pe.get('start') or pe.get('start_time', '0'))
                 end = self.parse_timestamp(pe.get('end') or pe.get('end_time', '0'))
+                if start is None or end is None:
+                    continue
                 caption = pe.get('caption', '') or pe.get('description', '') or ''
                 if caption:
                     pred_list.append({"sentence": caption, "timestamp": [start, end]})
@@ -246,8 +298,12 @@ class VANTAGE_DVC(VideoBaseDataset):
             gt_timestamps = []
             gt_sentences = []
             for ge in gt_events:
+                if not isinstance(ge, dict):
+                    continue
                 start = self.parse_timestamp(ge.get('start', '0'))
                 end = self.parse_timestamp(ge.get('end', '0'))
+                if start is None or end is None:
+                    continue
                 caption = ge.get('caption', '') or ge.get('description', '') or ''
                 if caption:
                     gt_timestamps.append([start, end])
@@ -257,7 +313,7 @@ class VANTAGE_DVC(VideoBaseDataset):
         gt_vids = list(set(gts.keys()) & set(preds.keys()))
         if not gt_vids:
             print("Warning: No videos with both predictions and ground truth.")
-            return {"overall": {"mIoU": 0.0, "IoU_F1": 0.0, "BertScore_F1": 0.0, "SODA_c": 0.0}}
+            return {'soda_c': 0.0, 'miou': 0.0, 'iou_f1': 0.0, 'bertscore_f1': 0.0}
         print(f"\nEvaluating {len(gt_vids)} videos with SODA-c...")
         bert_endpoint = judge_kwargs.get('bert_score_endpoint') or os.environ.get('BERT_SCORE_ENDPOINT')
         use_remote = bool(bert_endpoint)
@@ -275,8 +331,14 @@ class VANTAGE_DVC(VideoBaseDataset):
                     "cuda" if torch.cuda.is_available() else "cpu")
                 print(f"BERTScore device: {bert_device}")
                 bert_scorer = BERTScorer(model_type="roberta-large", device=bert_device)
-            except ImportError:
-                print("Warning: bert_score not available, using dummy (F1=0.5). pip install bert-score")
+            except ImportError as e:
+                raise RuntimeError(
+                    "bert_score (and/or torch) is not available in this environment. "
+                    "DVC evaluation requires it for BERTScore-based caption quality; "
+                    "silently falling back to a dummy F1=0.5 score would corrupt "
+                    "leaderboard numbers, so this is a hard failure instead. "
+                    "pip install bert-score torch"
+                ) from e
         def bert_remote(cands, refs):
             import requests
             r = requests.post(f"{bert_endpoint}/score", json={"candidates": cands, "references": refs}, timeout=300)
