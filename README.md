@@ -15,7 +15,7 @@ This repository is a fork of [VLMEvalKit](https://github.com/open-compass/VLMEva
 - [End-to-End Flow](#end-to-end-flow)
 - [Benchmarks](#benchmarks)
 - [Installation](#installation)
-- [Palmetto setup](#palmetto-setup)
+- [Optional: Clemson Palmetto setup](#optional-clemson-palmetto-setup)
 - [Dataset Setup](#dataset-setup)
 - [Running Evaluations](#running-evaluations)
 - [Submission Workflow](#submission-workflow)
@@ -215,17 +215,22 @@ pip install vllm
 > (`/result*`, `*.result`) specifically so it does **not** exclude that source file; do not
 > revert it to a bare `result*`.
 
-> **ANTLR dependency note.** The base environment uses
+> **ANTLR dependency note (all platforms).** The base environment uses
 > `antlr4-python3-runtime==4.9.3`, as required by OmegaConf. The optional
 > HiPhO benchmark's `math-verify` dependency requires ANTLR 4.13, so run
 > that benchmark in a separate environment; installing both into the base
-> environment makes pip dependency resolution fail.
+> environment makes pip dependency resolution fail. This is independent of
+> Palmetto.
 
 ---
 
-## Palmetto setup
+## Optional: Clemson Palmetto setup
 
-On Clemson Palmetto, the login shell defaults to GCC 8.5.0. Load a newer GCC
+For non-Palmetto systems, use the generic installation above. It does not
+require Slurm, Palmetto modules, or `/scratch`. Use this section only when
+running on Clemson Palmetto.
+
+On Palmetto, the login shell defaults to GCC 8.5.0. Load a newer GCC
 module before installing packages with native extensions, and use the same
 module when running the environment. The commands below use GCC 12.3.0,
 which is available on Palmetto. Run the installation in a Slurm allocation,
