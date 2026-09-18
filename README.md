@@ -15,6 +15,7 @@ This repository is a fork of [VLMEvalKit](https://github.com/open-compass/VLMEva
 - [End-to-End Flow](#end-to-end-flow)
 - [Benchmarks](#benchmarks)
 - [Installation](#installation)
+- [Possible Issues and Solutions](#possible-issues-and-solutions)
 - [Dataset Setup](#dataset-setup)
 - [Running Evaluations](#running-evaluations)
 - [Submission Workflow](#submission-workflow)
@@ -213,6 +214,25 @@ pip install vllm
 > `MMMU_TEST` / `MMT-Bench_ALL` datasets). The `.gitignore` `result*` rule is anchored
 > (`/result*`, `*.result`) specifically so it does **not** exclude that source file; do not
 > revert it to a bare `result*`.
+
+---
+
+## Possible Issues and Solutions
+
+- **Pip reports an ANTLR dependency conflict.** OmegaConf requires
+  `antlr4-python3-runtime==4.9.3`, while the optional HiPhO benchmark's
+  `math-verify` dependency requires ANTLR 4.13. Install the repository's
+  current `requirements.txt` for the base environment. If you need HiPhO,
+  use a separate environment for its dependencies.
+- **A native extension fails to compile.** Check the compiler version and the
+  package's error message. If it requires a newer C/C++ compiler, select one
+  supported by that package and rerun the install with `CC` and `CXX` set to
+  its compiler paths. A compiler upgrade is unnecessary when wheel installation
+  succeeds.
+- **`pip check` says `decord 0.6.0 is not supported on this platform`.** Try
+  `python -c 'import decord; print(decord.__version__)'`. This warning was
+  observed even when decord imported successfully; if the import fails, install
+  a decord build compatible with your Python version and operating system.
 
 ---
 
