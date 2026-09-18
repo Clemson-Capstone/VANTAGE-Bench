@@ -265,6 +265,9 @@ python scripts/preflight_check.py \
 
 The generic `scripts/srun.sh` requests eight GPUs and 64 CPUs, so use a
 resource request matched to your model instead of that wrapper for small runs.
+On the tested Palmetto Python 3.10 environment, `pip check` reports
+`decord 0.6.0 is not supported on this platform`; `import decord` and the
+project preflight both succeed. Verify the import if you see this warning.
 
 ---
 
