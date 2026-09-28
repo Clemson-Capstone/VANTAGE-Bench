@@ -8,7 +8,7 @@ import torch
 
 from ..base import BaseModel
 from .prompt import Qwen3VLPromptMixin
-from ...smp import get_gpu_memory, listinstr
+from ...smp import get_gpu_memory, listinstr, clamp_video_nframes, pin_qwen_video_reader
 
 
 VLLM_MAX_IMAGE_INPUT_NUM = 128
@@ -92,6 +92,7 @@ class Qwen3VLChat(Qwen3VLPromptMixin, BaseModel):
         self.nframe = kwargs.pop('nframe', 128)
         self.FRAME_FACTOR = 2
         self.use_audio_in_video = use_audio_in_video
+        pin_qwen_video_reader()
 
         assert model_path is not None
         self.model_path = model_path
@@ -230,15 +231,11 @@ class Qwen3VLChat(Qwen3VLPromptMixin, BaseModel):
                     if self.fps is not None and 'fps' not in item and 'nframes' not in item:
                         item['fps'] = self.fps
                     elif self.nframe is not None and 'nframes' not in item and 'fps' not in item:
-                        import cv2
-                        video = cv2.VideoCapture(s['value'])
-                        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                        video.release()
-                        if frame_count < self.nframe:
-                            new_frame_count = frame_count // self.FRAME_FACTOR * self.FRAME_FACTOR
-                            item['nframes'] = new_frame_count
-                        else:
-                            item['nframes'] = self.nframe
+                        item['nframes'] = self.nframe
+                    # The dataset may request more frames than a short clip has
+                    # (qwen_vl_utils raises on that), so clamp against the clip.
+                    if 'nframes' in item:
+                        item['nframes'] = clamp_video_nframes(value, item['nframes'], self.FRAME_FACTOR)
 
             elif s['type'] == 'audio':
                 item = {'type': 'audio', 'audio': s['value']}
