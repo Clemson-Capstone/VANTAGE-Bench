@@ -2918,6 +2918,14 @@ class TopViewRS(ImageMCQDataset):
         return acc
 
 class VANTAGE_2DPointing(ImageMCQDataset):
+    # The parent resolves supported names from DATASET_URL, which this class
+    # bypasses (load_data reads a local TSV), so register the key explicitly.
+    # With the key registered, build_dataset() constructs this class directly
+    # rather than using the generic TSV lookup.
+    @classmethod
+    def supported_datasets(cls):
+        return ['VANTAGE_2DPointing']
+
     def __init__(self, dataset='VANTAGE_2DPointing', custom_prompt=None, data_root=None, limit=None, random_state=None, **kwargs):
         self.verbose = kwargs.get('verbose', False)
         self.custom_prompt = custom_prompt
