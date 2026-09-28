@@ -515,6 +515,12 @@ python run.py --data VANTAGE_VQA_8frame --model <HFModelName>
 
 Model weights are loaded from HuggingFace Hub by default. Set `HF_HUB_CACHE` to control the local cache directory.
 
+#### Runtime notes for local video models
+
+- torch 2.14 installs torchvision 0.29, which removed `torchvision.io.read_video`. `qwen_vl_utils` falls back to that reader whenever its preferred reader raises, so the Qwen2-VL and Qwen3-VL wrappers pin `FORCE_QWENVL_VIDEO_READER` to `decord` (or `torchcodec` when decord is not installed) at construction. Set the variable yourself to choose a reader; `pip install decord` if neither is available.
+- A clip with fewer decodable frames than the requested frame count (for example an `_8frame` dataset variant on a 5-frame clip) is sampled at its full length, rounded down to an even number of frames, which keeps the request within the `[2, N]` range `qwen_vl_utils` accepts. One line is printed per clamped clip.
+- A sample whose generation raises (an unreadable clip, an error inside the model's preprocessing) is handled on its own and inference continues with the next sample. Its prediction is recorded as `Failed to obtain answer: <ExceptionType>: <message>`, the traceback is logged once per exception type, and the number of failed samples is reported when inference finishes; such rows receive no credit. Set `VANTAGE_FAIL_FAST=1` to stop at the first error instead.
+
 ### 3. Local vLLM model (multi-GPU)
 
 Use a config file to pass `use_vllm` and `tensor_parallel_size`:
