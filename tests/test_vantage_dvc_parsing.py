@@ -122,3 +122,36 @@ def test_parse_events_from_json_fenced_block():
         {"start": "00:00.00", "end": "00:05.00", "caption": "A man walks in."},
         {"start": "00:05.00", "end": "00:10.00", "caption": "He sits down."},
     ]
+
+
+# ---------------------------------------------------------------------------
+# parse_timestamp: 'start - end' ranges pick the endpoint the field asks for
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("ts_str,start_expected,end_expected", [
+    ('00:04.72 - 00:09.31', 4.72, 9.31),
+    ('4 - 9', 4.0, 9.0),
+    ('00:00:04,720 - 00:00:09,310', 4.72, 9.31),
+    ('1m5s - 1m10s', 65.0, 70.0),
+])
+def test_parse_timestamp_range_endpoints(ts_str, start_expected, end_expected):
+    # Default (and explicit which='start') takes the first endpoint.
+    assert parse_timestamp(ts_str) == pytest.approx(start_expected)
+    assert parse_timestamp(ts_str, which='start') == pytest.approx(start_expected)
+    # An 'end' field takes the second endpoint.
+    assert parse_timestamp(ts_str, which='end') == pytest.approx(end_expected)
+
+
+@pytest.mark.parametrize("ts_str,expected", [
+    ('4.72', 4.72),
+    ('00:01:04.72', 64.72),
+    (5.5, 5.5),
+    (None, 0.0),
+    ('', 0.0),
+])
+def test_parse_timestamp_which_end_is_noop_without_a_range(ts_str, expected):
+    assert parse_timestamp(ts_str, which='end') == pytest.approx(expected)
+
+
+def test_parse_timestamp_which_end_unparseable_returns_none():
+    assert parse_timestamp('Frame 1 - Frame 2', which='end') is None
