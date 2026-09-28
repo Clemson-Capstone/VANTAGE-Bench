@@ -371,6 +371,7 @@ python run.py \
 | `--mode eval` | `all` | Evaluation only (requires existing prediction file) |
 | `--api-nproc 8` | `4` | Parallel threads for API model calls |
 | `--retry 5` | model default | Retry count for failed API calls |
+| `--allow-partial-failures` | off | Exit 0 even if a model x dataset combination failed (default: summary table + exit 1) |
 | `--verbose` | off | Verbose logging |
 
 ---
