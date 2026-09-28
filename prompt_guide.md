@@ -86,8 +86,6 @@ Respond with ONLY the letter corresponding to your answer (A, B, C, or D). Do no
 ## VANTAGE Spatial
 **Astro2D**: Focuses on fine-grained human bounding box prediction. It requires the model to precisely localize people within high-definition industrial or urban frames, providing a baseline for downstream safety tasks.
 
-**VANTAGE 2D Detection**: A standard class-based localization task. It requires the model to detect and categorize multiple object classes within the automobile category simultaneously across diverse scene layouts.
-
 **2D Grounding**: A complex language-vision alignment task. The model must identify a specific target object(s) based on a descriptive natural language prompt.
 
 **2D Spatial Pointing**: It evaluates fine-grained spatial accuracy by requiring the model to choose between multiple candidate coordinates in a multiple-choice format, testing whether the model can point to the correct visual referent.
@@ -107,19 +105,6 @@ Locate every instance that belongs to the following categories: 'person'. Report
 ```
 ---
 
-### VANTAGE 2D Detection
-```text
-Locate every instance that belongs to the following categories: 'sedan, SUV, bus, truck'. For each instance of the class, report bbox coordinates in JSON format. Do not group instances and report only individual instances.
-```
-
-### Example JSON Output for VANTAGE 2D Detection
-```text
-[
-	{"bbox_2d": [304, 367, 339, 388], "label": "car"},
-	{"bbox_2d": [344, 369, 376, 388], "label": "truck"}
-]
-```
----
 
 
 

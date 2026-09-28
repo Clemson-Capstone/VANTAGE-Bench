@@ -100,10 +100,11 @@ def evaluate_event_verification_submission(
 
     Returns
     -------
-    pandas.DataFrame
+    dict
         Whatever the existing VANTAGE_EventVerification.evaluate() returns.
-        Today that is a DataFrame with shape (1, ~19) containing Valid
-        Predictions, Total Samples, and flattened classification_report keys.
+        Today that is a flat dict with keys macro_f1, accuracy and
+        balanced_accuracy ({} when the GT answer column is absent; all
+        zeros when no prediction contains a yes/no answer).
     """
     # Local import to avoid any module-load-time side effects on non-EV runs.
     from vlmeval.dataset.vantage_event_verification import VANTAGE_EventVerification

@@ -154,10 +154,14 @@ def evaluate_astro_submission(
     -------
     dict
         Whatever the existing Astro2DDetectionDataset.evaluate() returns.
-        Today that is a flat dict with keys precision/recall/f1/f1_0.95/
-        f1_mIOU/total_predictions/valid_bbox_predictions/valid_rate/
-        total_gt_objects/total_pred_objects/true_positives/false_positives/
-        false_negatives/gt_filtered_small/pred_filtered_small.
+        Today that is a flat dict with keys f1, precision, recall (all at
+        IoU 0.5), f1_at_0_95 and f1_miou (mean F1 over IoU 0.5:0.05:0.95);
+        {} when no GT label files are present. The count fields
+        (total_predictions, valid_bbox_predictions, valid_rate,
+        total_gt_objects, total_pred_objects, true_positives,
+        false_positives, false_negatives, gt_filtered_small,
+        pred_filtered_small) are written to the *_metrics.json side file
+        only, not returned.
     """
     # Local import to avoid module-load-time side effects on non-astro runs.
     from vlmeval.dataset.vantage2d.astro_2d_dataset import Astro2DDetectionDataset

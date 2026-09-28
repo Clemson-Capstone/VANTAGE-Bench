@@ -98,7 +98,9 @@ def evaluate_vqa_submission(submission_path, private_gt_path, work_dir=None, **j
     -------
     dict
         Whatever the existing VANTAGE_VQA.evaluate() returns. Today that is
-        ``{'Overall': <float>}``.
+        ``{'accuracy': <float>}`` ({} when the GT answer column is absent).
+        The per-category and per-task-type breakdowns are written to the
+        *_results.csv side file only.
     """
     # Local import to avoid any module-load-time side effects on non-VQA runs.
     from vlmeval.dataset.vantage_vqa import VANTAGE_VQA

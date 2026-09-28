@@ -575,7 +575,7 @@ Override the output root with `--work-dir` or the `MMEVAL_ROOT` environment vari
 
 ## Prediction File Schemas
 
-Ground truth is always resolved from the dataset TSV at evaluation time. Prediction files only need to contain the model's raw outputs alongside an identifier column.
+Prediction files only need to contain the model's raw outputs alongside an identifier column; ground truth is never read from the prediction file. Ground truth is withheld from the public HuggingFace release, so with the public data every local `evaluate()` call writes the submission JSONL and then returns `{}` (the `answer` / `gt_bboxes` columns and label files are absent). The "GT resolution" column below describes how the scoring server joins ground truth to your predictions; the same code path runs locally only when a private GT copy is present.
 
 | Benchmark | Required columns | GT resolution |
 |-----------|-----------------|---------------|

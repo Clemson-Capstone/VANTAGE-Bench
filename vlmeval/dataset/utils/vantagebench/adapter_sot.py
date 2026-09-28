@@ -129,8 +129,11 @@ def evaluate_sot_submission(
     Returns
     -------
     dict
-        Whatever the existing VANTAGE_SOT.evaluate() returns: a dict
-        keyed by cache['label'] (slash-form) plus 'Overall'.
+        Whatever the existing VANTAGE_SOT.evaluate() returns. Today that is
+        a flat dict with keys mean_iou, success_auc and precision_at_0_5,
+        averaged over sequences ({} when no GT boxes are present). The
+        per-sequence dict keyed by cache['label'] (slash-form) plus
+        'Overall' is written to the *_sot_results.json side file only.
     """
     # Local import to avoid module-load-time side effects on non-SOT runs.
     from vlmeval.dataset.vantage_sot import VANTAGE_SOT
