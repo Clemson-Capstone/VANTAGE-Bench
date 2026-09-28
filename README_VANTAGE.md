@@ -35,9 +35,9 @@ vlmeval/
 │   │   ├── __init__.py
 │   │   ├── grounding_2d_dataset.py     # VANTAGE_2DGroundingDataset (image)
 │   │   ├── astro_2d_dataset.py         # Astro2DDetectionDataset (image)
-│   │   ├── pointing_dataset.py         # VANTAGE_2DPointing (image)
-│   │   ├── datasets.yaml               # per-dataset config (classes, S3 paths)
-│   │   └── utils.py                    # shared bbox / AP helpers
+│   │   ├── datasets.yaml               # per-dataset config (classes, local data_root)
+│   │   └── utils.py                    # shared bbox / IoU / KITTI-label helpers
+│   ├── image_mcq.py                    # VANTAGE_2DPointing (image MCQ)
 │   ├── __init__.py                     # imports + IMAGE_DATASET / VIDEO_DATASET lists
 │   └── video_dataset_config.py         # all video variant registrations
 ├── vlm/                                # local model wrappers (HuggingFace / vLLM)
@@ -85,16 +85,9 @@ pip install vllm
 
 ## 3. Environment variables
 
-### S3 dataset download (internal use only)
+### Dataset location
 
-The S3 bucket is not publicly accessible. External users should download data via `scripts/run_lmudata.py` (see [`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md)). These variables are only relevant for internal NVIDIA infrastructure where data is not already present under `$LMUData/datasets/<DatasetName>/`.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VANTAGE_S3_PROFILE` | `default` | AWS credentials profile in `~/.aws/credentials` |
-| `VANTAGE_S3_REGION` | — | AWS region override |
-| `VANTAGE_S3_ENDPOINT_URL` | — | S3-compatible endpoint (omit for standard AWS) |
-| `VANTAGE_S3_DOWNLOAD_WORKERS` | `8` | Parallel download threads |
+Datasets are read from `$LMUData/datasets/<DatasetName>/` only; populate it with `scripts/run_lmudata.py` (see [`scripts/RUN_LMUData.md`](scripts/RUN_LMUData.md)). There is no S3 download path in this repository: no code reads `VANTAGE_S3_*` environment variables, and `Astro2D` rejects an `s3://` `data_root`.
 
 ### API model inference
 
@@ -474,7 +467,7 @@ See [docs/vantage/VANTAGEEvalInputs.md](docs/vantage/VANTAGEEvalInputs.md) for t
 
 ## 10. Data directory layout
 
-Dataset files are loaded from `$LMUData/datasets/<DatasetName>/`. Populate this using `scripts/run_lmudata.py`. Internal NVIDIA infrastructure may additionally fall back to S3 via `VANTAGE_S3_*` env vars, but S3 is not accessible to external users.
+Dataset files are loaded from `$LMUData/datasets/<DatasetName>/`. Populate this using `scripts/run_lmudata.py`. There is no S3 fallback, and no code reads `VANTAGE_S3_*` environment variables.
 
 Expected local layout for video datasets:
 

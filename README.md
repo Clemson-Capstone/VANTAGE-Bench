@@ -51,8 +51,8 @@ Unlike benchmarks built around curated internet media or short trimmed clips, VA
 
 | Pillar | Task | Primary Metric |
 |--------|------|----------------|
-| Spatial | 2D Object Localization | F1@0.5 |
-| Spatial | 2D Referring Expressions | mIoU |
+| Spatial | 2D Object Localization | F1@0.5 (precision, recall and F1 at IoU 0.5; no mAP is computed) |
+| Spatial | 2D Referring Expressions | Mean IoU (best predicted box per item), with Acc@0.25/0.5/0.75 |
 | Spatial | 2D Pointing | Accuracy |
 | Spatio-Temporal | Single Object Tracking | AUC |
 | Temporal | Temporal Localization | mIoU |
@@ -159,7 +159,7 @@ HF Space (hf/app.py)                   Gradio leaderboard UI at
 | EventVerification | `vantage_event_verification.py` → `VANTAGE_EventVerification` | `build_prompt()` | `evaluate()` → `adapter_event_verification.py` |
 | SOT | `vantage_sot.py` → `VANTAGE_SOT` | `build_prompt()` | `evaluate()` → `adapter_sot.py` |
 | 2DGrounding | `vantage2d/grounding_2d_dataset.py` | `build_prompt()` | `evaluate()` → `adapter_grounding.py` |
-| 2DPointing | `vantage2d/pointing_dataset.py` | inherited MCQ | `evaluate()` → `adapter_pointing.py` |
+| 2DPointing | `image_mcq.py` → `VANTAGE_2DPointing` | `build_prompt()` (MCQ over candidate points) | `evaluate()` → `adapter_pointing.py` |
 | Astro2D | `vantage2d/astro_2d_dataset.py` | `build_prompt()` | `evaluate()` → `adapter_astro.py` |
 
 ---
@@ -182,9 +182,9 @@ VANTAGE covers eight tasks across video and image modalities. Each benchmark is 
 
 | Benchmark | Task | Primary Metrics | Dataset key |
 |-----------|------|-----------------|-------------|
-| **VANTAGE-2DGrounding** | Referring expression grounding | Acc@0.5, Acc@0.25, Mean IoU | `VANTAGE_2DGrounding` |
+| **VANTAGE-2DGrounding** | Referring expression grounding | Mean IoU, Acc@0.5, Acc@0.25, Acc@0.75 (per item, the best IoU over all predicted boxes against any GT box is used) | `VANTAGE_2DGrounding` |
 | **VANTAGE-2DPointing** | Spatial pointing (multiple-choice) | Accuracy | `VANTAGE_2DPointing` |
-| **Astro2D** | Person detection on aerial imagery | mAP, AP50 | `Astro2D` |
+| **Astro2D** | Person detection on aerial imagery | F1@0.5 (primary), Precision@0.5, Recall@0.5, F1@0.95, mean F1 over IoU 0.5:0.05:0.95 | `Astro2D` |
 
 All dataset keys and their frame/fps variants are listed in [All Registered Dataset Names](#all-registered-dataset-names).
 
@@ -260,17 +260,19 @@ Full documentation, prerequisites (ffmpeg, gdown), troubleshooting, and advanced
 
 #### Source layout for EventVerification and 2DPointing
 
-The prep script reads these two tasks directly from the public release layout:
+The prep script reads these two tasks directly from the public release layout. Each has
+been published in two equivalent layouts and a given dataset revision ships one of them;
+the script uses whichever is present:
 
-- **EventVerification** — annotations and videos are downloaded from
-  `data/event_verification/filtered/**`. Annotation files are named
-  `test_annotation*.json` and live in **per-group subdirectories**; the item list inside
-  each is wrapped under a single (dataset-named) top-level key. Each item's `video` path is
-  resolved **relative to its own annotation file's directory** — videos are in nested
+- **EventVerification** - either a flat `data/event_verification/data_jsons/annotations/*.json`
+  directory, or per-group `test_annotation*.json` files under
+  `data/event_verification/filtered/**`. In the `filtered/` layout the item list inside each
+  file is wrapped under a single (dataset-named) top-level key and each item's `video` path is
+  resolved **relative to its own annotation file's directory** - videos are in nested
   subtrees, not a single flat `videos/` folder. Output video basenames are de-duplicated.
-- **2DPointing** — the source is `data/pointing/Vantage2DPointing.tsv`, a TSV already in
-  the benchmark schema (read directly with `csv.DictReader`). There is no
-  `VANTAGE_2DPointing.jsonl`.
+- **2DPointing** - either `data/pointing/VANTAGE_2DPointing.jsonl` (current layout) or
+  `data/pointing/Vantage2DPointing.tsv`. Both are already in the benchmark schema and
+  differ only in encoding; the script writes `VANTAGE_2DPointing.tsv` either way.
 
 ### Local layout
 
@@ -312,18 +314,9 @@ $LMUData/                                      # default: ~/LMUData
         └── labels/
 ```
 
-### S3 fallback (internal use only)
+### No S3 fallback
 
-For environments with access to private S3-compatible storage, the dataset classes can fall back to downloading from S3 if the local directory is absent. Set these variables before running:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VANTAGE_S3_PROFILE` | `default` | AWS credentials profile in `~/.aws/credentials` |
-| `VANTAGE_S3_REGION` | — | AWS region override |
-| `VANTAGE_S3_ENDPOINT_URL` | — | S3-compatible endpoint |
-| `VANTAGE_S3_DOWNLOAD_WORKERS` | `8` | Parallel download threads |
-
-> **Note:** The S3 bucket is not publicly accessible. External users should use the HuggingFace download path above.
+Datasets are read from the local `$LMUData` tree only. There is no S3 download path in this repository: no code reads `VANTAGE_S3_*` environment variables, and `Astro2D` rejects an `s3://` `data_root` with an error. Use the HuggingFace download path above.
 
 ---
 
@@ -642,12 +635,12 @@ vlmeval/
 │   ├── vantage_dvc.py                  # VANTAGE-DVC
 │   ├── vantage_event_verification.py   # VANTAGE-EventVerification
 │   ├── vantage_sot.py                  # VANTAGE-SOT
+│   ├── image_mcq.py                    # VANTAGE-2DPointing (class VANTAGE_2DPointing)
 │   ├── vantage2d/
 │   │   ├── grounding_2d_dataset.py     # VANTAGE-2DGrounding
 │   │   ├── astro_2d_dataset.py         # Astro2D
-│   │   ├── pointing_dataset.py         # VANTAGE-2DPointing
 │   │   ├── datasets.yaml               # per-dataset path config (image tasks)
-│   │   └── utils.py                    # shared bbox / AP helpers
+│   │   └── utils.py                    # shared bbox / IoU / KITTI-label helpers
 │   ├── utils/vantagebench/             # submission emitter, adapters, ID rules
 │   ├── __init__.py                     # dataset registration
 │   └── video_dataset_config.py         # video variant registrations

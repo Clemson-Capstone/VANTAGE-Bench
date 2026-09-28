@@ -20,7 +20,7 @@ Image benchmark implementations for VANTAGE-Bench. Three independent tasks, each
 |------|---------|
 | `grounding_2d_dataset.py` | `VANTAGE_2DGroundingDataset` — referring expression grounding. Accepts RefCOCO JSON or JSONL annotation formats. |
 | `astro_2d_dataset.py` | `Astro2DDetectionDataset` — person detection on aerial/overhead imagery. Labels in KITTI format. |
-| `pointing_dataset.py` | `VANTAGE_2DPointing` — spatial pointing multiple-choice benchmark. |
+| (none here) | `VANTAGE_2DPointing` - the spatial pointing multiple-choice benchmark lives in `vlmeval/dataset/image_mcq.py`, not in this directory. |
 | `datasets.yaml` | Per-dataset path config. Maps dataset name → class and `data_root`. Loaded by `utils.load_dataset_config()`. |
 | `utils.py` | Shared helpers: `load_dataset_config`, `scale_bbox`, `compute_2d_iou`, `parse_kitti_label`, `parse_bbox_2d_from_text`. |
 | `__init__.py` | Re-exports `VANTAGE_2DGroundingDataset`, `Astro2DDetectionDataset`. |
