@@ -52,7 +52,7 @@ outputs/<model>/<eval_id>/
 └── <model>_Astro2D_submission.jsonl
 ```
 
-> **Note:** Submission JSONLs are produced by the evaluation phase. If you ran with `--mode infer`, re-run with `--mode eval --reuse` to generate them without repeating inference.
+> **Note:** The evaluation phase writes `<model>_<dataset>_submission.jsonl`. A run with `--mode infer` instead writes `<model>_<dataset>.submission.jsonl` next to the prediction file; `package_submission.py` accepts both names, so re-running with `--mode eval --reuse` is optional.
 
 ---
 
@@ -103,7 +103,7 @@ Go to [https://vantage-bench.org/submit](https://vantage-bench.org/submit) and c
 | Problem | Fix |
 |---------|-----|
 | Partial pillar rejected | Run all tasks in the pillar; see pillar table above |
-| Missing `*_submission.jsonl` | Re-run with `--mode eval --reuse`; submission files require the eval phase |
+| No submission files found | Check `--work-dir` points at the run folder; both `*_submission.jsonl` (eval) and `*.submission.jsonl` (infer) are accepted |
 | Archive > 500 MB | Run `package_submission.py` from a clean output dir; check for extra files |
 | No score email | Check spam; evaluation can take up to 24 hours |
 
