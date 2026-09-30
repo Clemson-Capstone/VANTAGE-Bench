@@ -7,7 +7,8 @@ gradio
 huggingface_hub
 imageio
 json_repair
-math-verify
+# Optional HiPhO dependency: math-verify requires ANTLR 4.13, which
+# conflicts with OmegaConf's ANTLR 4.9. Install in a separate environment.
 matplotlib
 nltk
 numpy
@@ -52,7 +53,7 @@ levenshtein>=0.27.1
 jieba>=0.42.1
 editdistance>=0.8.1
 anls>=0.0.2
-antlr4-python3-runtime==4.11.1
+antlr4-python3-runtime==4.9.3
 # For SArena
 torchmetrics
 scikit-image
