@@ -166,7 +166,7 @@ class VANTAGE_DVC(VideoBaseDataset):
         return msgs
 
     @staticmethod
-    def parse_timestamp(ts_str):
+    def parse_timestamp(ts_str, which='start'):
         """Parse a timestamp-ish value into seconds.
 
         Returns 0.0 for None/empty input (existing behavior other callers
@@ -177,8 +177,10 @@ class VANTAGE_DVC(VideoBaseDataset):
         tolerates a handful of real-world model output formats: trailing
         unit suffixes ('4.72s' / '4.72 sec' / '4.72 seconds'), compound
         durations ('1m5s', '2h3m4s'), a comma decimal separator
-        ('00:00:04,720'), and a 'start - end' range (the first endpoint is
-        used).
+        ('00:00:04,720'), and a 'start - end' range. For a range the
+        endpoint named by ``which`` is used: 'start' (default) takes the
+        first endpoint, 'end' takes the second, so a model that repeats the
+        whole span in both fields still yields a non-empty event.
         """
         if ts_str is None:
             return 0.0
@@ -188,9 +190,11 @@ class VANTAGE_DVC(VideoBaseDataset):
         if not ts_str:
             return 0.0
 
-        # A range like "00:04.72 - 00:09.31": use the first endpoint.
+        # A range like "00:04.72 - 00:09.31": use the endpoint the caller
+        # asked for (first for a 'start' field, second for an 'end' field).
         if ' - ' in ts_str:
-            ts_str = ts_str.split(' - ')[0].strip()
+            endpoints = ts_str.split(' - ')
+            ts_str = (endpoints[-1] if which == 'end' else endpoints[0]).strip()
 
         if ':' in ts_str:
             # SRT-style comma decimal separator, e.g. "00:00:04,720".
@@ -282,7 +286,7 @@ class VANTAGE_DVC(VideoBaseDataset):
                 if not isinstance(pe, dict):
                     continue
                 start = self.parse_timestamp(pe.get('start') or pe.get('start_time', '0'))
-                end = self.parse_timestamp(pe.get('end') or pe.get('end_time', '0'))
+                end = self.parse_timestamp(pe.get('end') or pe.get('end_time', '0'), which='end')
                 if start is None or end is None:
                     continue
                 caption = pe.get('caption', '') or pe.get('description', '') or ''
@@ -301,7 +305,7 @@ class VANTAGE_DVC(VideoBaseDataset):
                 if not isinstance(ge, dict):
                     continue
                 start = self.parse_timestamp(ge.get('start', '0'))
-                end = self.parse_timestamp(ge.get('end', '0'))
+                end = self.parse_timestamp(ge.get('end', '0'), which='end')
                 if start is None or end is None:
                     continue
                 caption = ge.get('caption', '') or ge.get('description', '') or ''

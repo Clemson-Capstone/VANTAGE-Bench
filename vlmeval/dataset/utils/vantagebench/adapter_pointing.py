@@ -103,7 +103,9 @@ def evaluate_pointing_submission(
     -------
     dict
         Whatever the existing VANTAGE_2DPointing.evaluate() returns. Today
-        that is a flat dict: {'Overall': <float>, '<category>': <float>, ...}.
+        that is ``{'accuracy': <float>}`` ({} when the GT answer column is
+        absent). The per-category breakdown is written to the *_results.json,
+        *_acc.csv and *_metrics.csv side files only.
     """
     # Local import to avoid module-load-time side effects on non-pointing runs.
     from vlmeval.dataset.image_mcq import VANTAGE_2DPointing

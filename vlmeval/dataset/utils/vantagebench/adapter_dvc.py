@@ -107,7 +107,10 @@ def evaluate_dvc_submission(
     -------
     dict
         Whatever the existing VANTAGE_DVC.evaluate() returns. Today that is a
-        dict with keys 'overall' and 'category_metrics'.
+        flat dict with keys soda_c, miou, iou_f1 and bertscore_f1 ({} when
+        the GT answer column is absent). The per-category breakdown
+        ('overall' / 'category_metrics') is written to the *_metrics.json
+        side file only.
     """
     # Local import to avoid any module-load-time side effects on non-DVC runs.
     from vlmeval.dataset.vantage_dvc import VANTAGE_DVC

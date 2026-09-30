@@ -11,7 +11,7 @@ from transformers import StoppingCriteria
 
 from ..base import BaseModel
 from .prompt import Qwen2VLPromptMixin
-from ...smp import get_gpu_memory, listinstr
+from ...smp import get_gpu_memory, listinstr, clamp_video_nframes, pin_qwen_video_reader
 from ...dataset import DATASET_MODALITY
 
 VLLM_MAX_IMAGE_INPUT_NUM = 24
@@ -219,6 +219,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                   the fps/nframe setting in video dataset is omitted")
         self.use_audio_in_video = use_audio_in_video
         self.FRAME_FACTOR = 2
+        pin_qwen_video_reader()
         assert model_path is not None
         self.model_path = model_path
         MODEL_CLS = None
@@ -328,16 +329,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                 if self.fps is not None:
                     item['fps'] = self.fps
                 elif self.nframe is not None:
-                    import cv2
-                    video = cv2.VideoCapture(s['value'])
-                    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                    video.release()
-                    if frame_count < self.nframe:
-                        new_frame_count = frame_count // self.FRAME_FACTOR * self.FRAME_FACTOR
-                        print(f"use {new_frame_count} for {s['value']}")
-                        item['nframes'] = new_frame_count
-                    else:
-                        item['nframes'] = self.nframe
+                    item['nframes'] = clamp_video_nframes(s['value'], self.nframe, self.FRAME_FACTOR)
             elif s['type'] == 'text':
                 item = {'type': 'text', 'text': s['value']}
             elif s['type'] == 'audio':
@@ -417,16 +409,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                     if self.fps is not None:
                         item['fps'] = self.fps
                     elif self.nframe is not None:
-                        import cv2
-                        video = cv2.VideoCapture(s['value'])
-                        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                        video.release()
-                        if frame_count < self.nframe:
-                            new_frame_count = frame_count // self.FRAME_FACTOR * self.FRAME_FACTOR
-                            print(f"use {new_frame_count} for {s['value']}")
-                            item['nframes'] = new_frame_count
-                        else:
-                            item['nframes'] = self.nframe
+                        item['nframes'] = clamp_video_nframes(s['value'], self.nframe, self.FRAME_FACTOR)
                     content.append(item)
             elif s['type'] == 'text':
                 item = {'type': 'text', 'text': s['value']}

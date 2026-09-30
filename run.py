@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 from functools import partial
 
 
@@ -196,6 +197,11 @@ You can launch the evaluation by setting either --data and --model or --config.
     # Configuration for Resume
     # Ignore: will not rerun failed VLM inference
     parser.add_argument('--ignore', action='store_true', help='Ignore failed indices. ')
+    parser.add_argument(
+        '--allow-partial-failures', action='store_true',
+        default=os.environ.get('VANTAGE_ALLOW_PARTIAL_FAILURES', '0') == '1',
+        help='Exit 0 even if some model x dataset combinations failed (default: exit 1). '
+             'Can also be enabled with VANTAGE_ALLOW_PARTIAL_FAILURES=1.')
     # Reuse: will reuse the existing prediction files
     parser.add_argument('--reuse', action='store_true')
     # Reuse-aux: if set, when reuse is True, will also reuse the auxiliary evaluation files
@@ -270,6 +276,9 @@ def main():
             timeout=datetime.timedelta(seconds=int(os.environ.get('DIST_TIMEOUT', 3600)))
         )
 
+    # (model, dataset, status, error) for every combination, reported at the end.
+    outcomes = []
+
     for _, model_name in enumerate(args.model):
         model = None
         date, commit_id = timestr('day'), githash(digits=8)
@@ -300,6 +309,8 @@ def main():
             if WORLD_SIZE > 1:
                 dist.barrier()
 
+            # Assume success; the failure branches below overwrite status and error.
+            outcomes.append([model_name, dataset_name, 'ok', ''])
             try:
                 pred_format = get_pred_file_format()
                 result_file_base = f'{model_name}_{dataset_name}.{pred_format}'
@@ -312,6 +323,7 @@ def main():
                     dataset = build_dataset_from_config(cfg['data'], dataset_name)
                     if dataset is None:
                         logger.error(f'Dataset {dataset_name} is not valid, will be skipped. ')
+                        outcomes[-1][2:] = ['failed', 'dataset is not valid']
                         continue
                 else:
                     dataset_kwargs = {}
@@ -327,6 +339,7 @@ def main():
                     dataset = build_dataset(dataset_name, **dataset_kwargs)
                     if dataset is None:
                         logger.error(f'Dataset {dataset_name} is not valid, will be skipped. ')
+                        outcomes[-1][2:] = ['failed', 'dataset is not valid']
                         continue
                 
                 if RANK == 0 and hasattr(dataset, "get_config_dict"):
@@ -530,10 +543,22 @@ def main():
             except Exception as e:
                 logger.exception(f'Model {model_name} x Dataset {dataset_name} combination failed: {e}, '
                                  'skipping this combination.')
+                outcomes[-1][2:] = ['failed', f'{type(e).__name__}: {e}']
                 continue
 
     if WORLD_SIZE > 1:
         dist.destroy_process_group()
+
+    failures = [o for o in outcomes if o[2] != 'ok']
+    if RANK == 0 and outcomes:
+        summary = pd.DataFrame(outcomes, columns=['model', 'dataset', 'status', 'error'])
+        summary['error'] = summary['error'].str.slice(0, 200)
+        logger.info('Run summary:\n' + tabulate(summary, headers='keys', showindex=False))
+        if failures:
+            logger.error(f'{len(failures)} of {len(outcomes)} model x dataset combinations failed. '
+                         'Check the log above for the traceback of each failure.')
+    if failures and not args.allow_partial_failures:
+        sys.exit(1)
 
 
 if __name__ == '__main__':

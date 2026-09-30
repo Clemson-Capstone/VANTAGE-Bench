@@ -1,3 +1,4 @@
+import traceback
 import torch
 import torch.distributed as dist
 from vlmeval.config import supported_VLM
@@ -5,6 +6,51 @@ from vlmeval.utils import track_progress_rich
 from vlmeval.smp import *
 
 FAIL_MSG = 'Failed to obtain answer via API.'
+# Prefix of the prediction recorded when a local model raises on a sample.
+GEN_FAIL_MSG = 'Failed to obtain answer'
+
+
+def fail_fast():
+    return os.environ.get('VANTAGE_FAIL_FAST', '0') == '1'
+
+
+def generate_or_record(model, struct, dataset_name, idx, seen_errors):
+    """Run model.generate for one sample and record any exception as the prediction.
+
+    A sample that raises (an unreadable clip, a preprocessing error inside the
+    model) is handled on its own: unless VANTAGE_FAIL_FAST=1 is set, the
+    error becomes the prediction `Failed to obtain answer: <Type>: <message>`
+    and inference continues, so the submitter still gets a complete prediction
+    file. The traceback is logged once per exception type (seen_errors is the
+    caller's set), later occurrences as one warning line with the sample index.
+    """
+    try:
+        return model.generate(message=struct, dataset=dataset_name)
+    except Exception as err:
+        if fail_fast():
+            raise
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        logger = get_logger('RUN')
+        err_type = type(err).__name__
+        if err_type not in seen_errors:
+            seen_errors.add(err_type)
+            logger.error(
+                f'Sample {idx} of {dataset_name} failed with {err_type}: {err}. Recording the error as the '
+                f'prediction and continuing (set VANTAGE_FAIL_FAST=1 to raise instead). Traceback:\n'
+                + traceback.format_exc())
+        else:
+            logger.warning(f'Sample {idx} of {dataset_name} failed with {err_type}: {err}')
+        return f'{GEN_FAIL_MSG}: {err_type}: {err}'
+
+
+def report_failed_samples(res, model_name, dataset_name):
+    n_failed = sum(str(v).startswith(GEN_FAIL_MSG) for v in res.values())
+    if n_failed:
+        get_logger('RUN').warning(
+            f'{model_name}/{dataset_name}: {n_failed} of {len(res)} samples failed; their predictions start '
+            f'with "{GEN_FAIL_MSG}" and will score as wrong.')
+    return n_failed
 
 
 def parse_args():
@@ -145,6 +191,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
     else:
         model.set_dump_image(dataset.dump_image)
 
+    seen_errors = set()
     for i in tqdm(range(lt), desc=f'Infer {model_name}/{dataset_name}, Rank {rank}/{world_size}'):
         idx = data.iloc[i]['index']
         if idx in res:
@@ -155,17 +202,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
         else:
             struct = dataset.build_prompt(data.iloc[i])
 
-        # If `SKIP_ERR` flag is set, the model will skip the generation if error is encountered
-        if os.environ.get('SKIP_ERR', False) == '1':
-            FAIL_MSG = 'Failed to obtain answer'
-            try:
-                response = model.generate(message=struct, dataset=dataset_name)
-            except RuntimeError as err:
-                torch.cuda.synchronize()
-                warnings.warn(f'{type(err)} {str(err)}')
-                response = f'{FAIL_MSG}: {type(err)} {str(err)}'
-        else:
-            response = model.generate(message=struct, dataset=dataset_name)
+        response = generate_or_record(model, struct, dataset_name, idx, seen_errors)
         torch.cuda.empty_cache()
 
         if verbose:
@@ -177,6 +214,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
 
     res = {k: res[k] for k in data_indices}
     dump(res, out_file)
+    report_failed_samples(res, model_name, dataset_name)
     return model
 
 

@@ -3,6 +3,7 @@ import torch.distributed as dist
 from vlmeval.config import supported_VLM
 from vlmeval.utils import track_progress_rich
 from vlmeval.smp import *
+from vlmeval.inference import generate_or_record, report_failed_samples
 
 FAIL_MSG = 'Failed to obtain answer via API.'
 
@@ -134,6 +135,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
         setattr(model, 'VIDEO_LLM', False)
 
     num_samples = len(sample_indices_subrem)
+    seen_errors = set()
     pbar = tqdm(
         enumerate(sample_indices_subrem),
         total=num_samples,
@@ -184,17 +186,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
         if struct is None:
             continue
 
-        # If `SKIP_ERR` flag is set, the model will skip the generation if error is encountered
-        if os.environ.get('SKIP_ERR', False) == '1':
-            FAIL_MSG = 'Failed to obtain answer'
-            try:
-                response = model.generate(message=struct, dataset=dataset_name)
-            except RuntimeError as err:
-                torch.cuda.synchronize()
-                warnings.error(f'{type(err)} {str(err)}')
-                response = f'{FAIL_MSG}: {type(err)} {str(err)}'
-        else:
-            response = model.generate(message=struct, dataset=dataset_name)
+        response = generate_or_record(model, struct, dataset_name, idx, seen_errors)
         torch.cuda.empty_cache()
 
         if verbose:
@@ -206,6 +198,7 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
 
     res = {k: res[k] for k in sample_indices_sub}
     dump(res, out_file)
+    report_failed_samples(res, model_name, dataset_name)
     return model
 
 

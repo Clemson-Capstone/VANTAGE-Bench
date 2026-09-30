@@ -480,9 +480,14 @@ def compute_sot_metrics(
 
     n_eval = len(ious)
     if n_eval == 0:
+        # No evaluable frame (e.g. the object is absent in every non-init GT
+        # frame and the model never predicted a box). Score the sequence as
+        # 0 for every metric, with the same key set as the normal path, so
+        # the per-sequence table and the CSV writer never hit a KeyError.
         return {
-            'mean_iou': 0.0, 'precision': 0.0, 'freeze_rate': 0.0,
-            'null_rate': 0.0, 'false_det_rate': 0.0,
+            'mean_iou': 0.0, 'success_auc': 0.0,
+            'precision': 0.0, 'precision_25': 0.0, 'precision_75': 0.0,
+            'freeze_rate': 0.0, 'null_rate': 0.0, 'false_det_rate': 0.0,
             'visible_iou': 0.0, 'occluded_iou': 0.0,
             'n_eval_frames': 0,
         }

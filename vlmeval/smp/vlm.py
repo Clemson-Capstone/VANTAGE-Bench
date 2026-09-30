@@ -196,3 +196,77 @@ def gpt_key_set():
 def apiok(wrapper):
     s = wrapper.generate('Hello!')
     return wrapper.fail_msg not in s
+
+
+def video_frame_count(video_path):
+    """Number of decodable frames in a video file, or None if it cannot be opened.
+
+    decord is tried first because it is what the dataset frame extraction and
+    the qwen_vl_utils decord reader count with (len(VideoReader)); cv2's
+    CAP_PROP_FRAME_COUNT comes from container metadata and can exceed what
+    actually decodes. cv2 is the fallback when decord is not installed.
+    """
+    try:
+        import decord
+        return len(decord.VideoReader(video_path))
+    except ImportError:
+        pass
+    except Exception:
+        return None
+    try:
+        import cv2
+        cap = cv2.VideoCapture(video_path)
+        try:
+            n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        finally:
+            cap.release()
+        return n if n > 0 else None
+    except Exception:
+        return None
+
+
+def clamp_video_nframes(video_path, nframes, frame_factor=2):
+    """Clamp a requested frame count to what the clip has.
+
+    qwen_vl_utils rejects nframes outside [frame_factor, total_frames], so a
+    clip shorter than the requested count is sampled at its full length,
+    rounded down to a multiple of frame_factor. Requests that fit, and clips
+    whose length cannot be read, are returned unchanged.
+    """
+    total = video_frame_count(video_path)
+    if total is None or nframes <= total:
+        return nframes
+    clamped = total // frame_factor * frame_factor
+    if clamped < frame_factor:
+        return nframes
+    print(f'Video {video_path} has {total} frames, sampling {clamped} instead of the requested {nframes}')
+    return clamped
+
+
+def pin_qwen_video_reader():
+    """Pin qwen_vl_utils to a video reader that exists in this environment.
+
+    When its preferred reader raises, qwen_vl_utils falls back to torchvision.io.read_video,
+    which torchvision 0.29 (installed with torch 2.14) removed. FORCE_QWENVL_VIDEO_READER
+    is honoured if the user set it; otherwise decord (the reader the harness uses
+    everywhere else) or torchcodec is forced. qwen_vl_utils reads the variable at import
+    time, so the already-imported module is patched as well. Returns the reader name, or
+    None when neither reader is installed.
+    """
+    import importlib.util
+    backend = os.environ.get('FORCE_QWENVL_VIDEO_READER')
+    if not backend:
+        for candidate in ('decord', 'torchcodec'):
+            if importlib.util.find_spec(candidate) is not None:
+                backend = candidate
+                break
+        if backend is None:
+            return None
+        os.environ['FORCE_QWENVL_VIDEO_READER'] = backend
+    vp = sys.modules.get('qwen_vl_utils.vision_process')
+    if vp is not None and getattr(vp, 'FORCE_QWENVL_VIDEO_READER', None) != backend:
+        vp.FORCE_QWENVL_VIDEO_READER = backend
+        cache_clear = getattr(getattr(vp, 'get_video_reader_backend', None), 'cache_clear', None)
+        if cache_clear is not None:
+            cache_clear()
+    return backend

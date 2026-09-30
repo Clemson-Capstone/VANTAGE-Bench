@@ -136,9 +136,11 @@ def evaluate_grounding_submission(
     -------
     dict
         Whatever the existing VANTAGE_2DGroundingDataset.evaluate() returns.
-        Today that is a dict with keys
-        Acc@0.25, Acc@0.5, Acc@0.75, Mean_IoU, total_samples, valid_predictions,
-        valid_rate, parse_failures, invalid_boxes_filtered.
+        Today that is a flat dict with keys acc_at_0_5, acc_at_0_25,
+        acc_at_0_75 and mean_iou ({} when no GT boxes are present). The
+        count fields (total_samples, valid_predictions, valid_rate,
+        parse_failures, invalid_boxes_filtered) are written to the
+        *_metrics.json side file only, not returned.
     """
     # Local import to avoid module-load-time side effects on non-grounding runs.
     from vlmeval.dataset.vantage2d.grounding_2d_dataset import VANTAGE_2DGroundingDataset

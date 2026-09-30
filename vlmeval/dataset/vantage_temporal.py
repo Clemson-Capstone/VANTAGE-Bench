@@ -404,7 +404,7 @@ class VANTAGE_Temporal(VideoBaseDataset):
                 if next_quote_idx == -1 or text_repaired[next_quote_idx - 1] == '\n':
                     text_repaired = text_repaired.rstrip() + '"'
         text_repaired = text_repaired.rstrip()
-        if not text_repaired.endswith('}'):
+        if not text_repaired.endswith(('}', ']')):
             text_repaired += '}'
         try:
             json_output = json.loads(text_repaired)
@@ -422,11 +422,31 @@ class VANTAGE_Temporal(VideoBaseDataset):
                 if strict:
                     raise ValueError(f"Failed to parse timestamps from: {text}")
                 return [0, duration]
-        start_parts = start.split(":")
-        end_parts = end.split(":")
-        start_seconds = float(start_parts[0]) * 60 + float(start_parts[1]) if len(start_parts) == 2 else float(start_parts[0])
-        end_seconds = float(end_parts[0]) * 60 + float(end_parts[1]) if len(end_parts) == 2 else float(end_parts[0])
-        return [start_seconds, end_seconds]
+        return [VANTAGE_Temporal.timestamp_to_seconds(start), VANTAGE_Temporal.timestamp_to_seconds(end)]
+
+    @staticmethod
+    def timestamp_to_seconds(value) -> float:
+        """Convert a JSON timestamp value to seconds.
+
+        Accepts a number (returned as float) or a string in 'ss', 'mm:ss' or
+        'hh:mm:ss' form (each component may carry decimals). Raises
+        ValueError for anything else so the caller can fall back to the
+        regex parser.
+        """
+        if isinstance(value, bool):
+            raise ValueError(f"Not a timestamp: {value!r}")
+        if isinstance(value, (int, float)):
+            return float(value)
+        if not isinstance(value, str):
+            raise ValueError(f"Not a timestamp: {value!r}")
+        parts = value.strip().split(":")
+        if len(parts) == 1:
+            return float(parts[0])
+        if len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        if len(parts) == 3:
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+        raise ValueError(f"Not a timestamp: {value!r}")
 
     @staticmethod
     def parse_timestamps(text: str, duration: float, strict: bool = False) -> Tuple[float, float]:

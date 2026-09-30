@@ -115,7 +115,9 @@ def evaluate_temporal_submission(
     -------
     dict
         Whatever the existing VANTAGE_Temporal.evaluate() returns. Today that
-        is a dict with keys 'overall' and 'category_metrics'.
+        is a flat dict with keys miou and precision_at_0_5 ({} when the GT
+        answer column is absent). The per-category breakdown ('overall' /
+        'category_metrics') is written to the *_metrics.json side file only.
     """
     # Local import to avoid any module-load-time side effects on non-Temporal runs.
     from vlmeval.dataset.vantage_temporal import VANTAGE_Temporal

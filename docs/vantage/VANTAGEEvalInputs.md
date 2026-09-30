@@ -8,6 +8,7 @@ This note documents the minimum prediction-file columns needed to run evaluation
 - every prediction file should include a `prediction` column
 - use dataset row identifiers from the benchmark TSV whenever possible
 - avoid copying GT fields like `answer`, `gt_bboxes`, or labels into exported predictions
+- ground truth is withheld from the public HuggingFace release, so with the public data every local `evaluate()` writes the submission JSONL and returns `{}`; the "GT ... resolved" notes below describe the join the scoring server performs
 
 ## VANTAGE VQA
 
