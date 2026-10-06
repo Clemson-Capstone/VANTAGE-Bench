@@ -18,4 +18,4 @@ from .config import *
 from .tools import cli
 
 
-__version__ = '0.2rc1'
+__version__ = '1.1.0'
