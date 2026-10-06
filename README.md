@@ -8,7 +8,7 @@
   <a href="https://vantage-bench.org/#leaderboard"><img alt="Leaderboard" src="https://img.shields.io/badge/Leaderboard-live-522D80"></a>
   <a href="https://arxiv.org/abs/2609.09396"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2609.09396-b31b1b"></a>
   <a href="https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench"><img alt="Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-PhysicalAI--VANTAGE--Bench-FF8800"></a>
-  <a href="https://github.com/Clemson-Capstone/VANTAGE-Bench/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Clemson-Capstone/VANTAGE-Bench?color=522D80&label=release"></a>
+  <a href="CHANGELOG.md"><img alt="Release" src="https://img.shields.io/badge/release-v1.1.0-522D80"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-1F8F66"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-1E63B5">
 </p>
@@ -761,7 +761,7 @@ revert it to a bare `result*`.
 <summary><b>Releasing a new version</b></summary>
 
 1. Add the changes to `CHANGELOG.md` under a new version heading.
-2. Set the same version in `setup.py` and `vlmeval/__init__.py`.
+2. Set the same version in `setup.py`, `vlmeval/__init__.py` and the release badge at the top of this file.
 3. Tag the merge commit (`git tag vX.Y.Z`) and publish a GitHub Release with the changelog text.
 4. Add a line to the [News](#news) section. The website lists the release automatically.
 
