@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 380" width="1280" height="380" role="img" aria-label="VANTAGE-Bench: Video Analysis Tasks Across Generalized Environments">
+<title>VANTAGE-Bench: Video Analysis Tasks Across Generalized Environments</title>
+<rect x="1" y="1" width="1278" height="378" rx="22" fill="#FBF8FF" stroke="#DED7EB" stroke-width="2"/>
+<text x="64" y="138" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="88" textLength="620" lengthAdjust="spacingAndGlyphs"><tspan fill="#FF8800">VANTAGE</tspan><tspan fill="#17141F">-</tspan><tspan fill="#522D80">Bench</tspan></text>
+<text x="66" y="184" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="25" xml:space="preserve"><tspan fill="#522D80" font-weight="700">V</tspan><tspan fill="#17141F">ideo </tspan><tspan fill="#522D80" font-weight="700">AN</tspan><tspan fill="#17141F">alysis </tspan><tspan fill="#522D80" font-weight="700">T</tspan><tspan fill="#17141F">asks </tspan><tspan fill="#522D80" font-weight="700">A</tspan><tspan fill="#17141F">cross </tspan><tspan fill="#522D80" font-weight="700">G</tspan><tspan fill="#17141F">eneralized </tspan><tspan fill="#522D80" font-weight="700">E</tspan><tspan fill="#17141F">nvironments</tspan></text>
+<text x="66" y="232" font-family="Inter, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="19" fill="#645C75">A benchmark for vision-language models on real-world</text>
+<text x="66" y="259" font-family="Inter, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="19" fill="#645C75">fixed-camera footage, scored against withheld ground truth.</text>
+<rect x="66" y="296" width="122" height="34" rx="17" fill="#FFFFFF" stroke="#522D80" stroke-width="1.5"/><circle cx="85" cy="313" r="5" fill="#522D80"/><text x="98" y="318" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#522D80">Semantic</text>
+<rect x="198" y="296" width="106" height="34" rx="17" fill="#FFFFFF" stroke="#C26A00" stroke-width="1.5"/><circle cx="217" cy="313" r="5" fill="#C26A00"/><text x="230" y="318" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#C26A00">Spatial</text>
+<rect x="314" y="296" width="122" height="34" rx="17" fill="#FFFFFF" stroke="#1F8F66" stroke-width="1.5"/><circle cx="333" cy="313" r="5" fill="#1F8F66"/><text x="346" y="318" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#1F8F66">Temporal</text>
+<rect x="446" y="296" width="174" height="34" rx="17" fill="#FFFFFF" stroke="#1E63B5" stroke-width="1.5"/><circle cx="465" cy="313" r="5" fill="#1E63B5"/><text x="478" y="318" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#1E63B5">Spatio-Temporal</text>
+<rect x="770" y="48" width="446" height="236" rx="14" fill="#F3ECFC" stroke="#DED7EB" stroke-width="1.5"/>
+<clipPath id="scene"><rect x="770" y="48" width="446" height="236" rx="14"/></clipPath>
+<g clip-path="url(#scene)">
+<line x1="993" y1="92" x2="333" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="443" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="553" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="663" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="773" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="883" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="993" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1103" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1213" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1323" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1433" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1543" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="993" y1="92" x2="1653" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="770" y1="123" x2="1216" y2="123" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="770" y1="150" x2="1216" y2="150" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="770" y1="184" x2="1216" y2="184" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="770" y1="230" x2="1216" y2="230" stroke="#E6DEF3" stroke-width="1.5"/>
+<line x1="770" y1="284" x2="1216" y2="284" stroke="#E6DEF3" stroke-width="1.5"/>
+</g>
+<path d="M 838 236 C 900 190, 960 196, 1010 160 S 1100 128, 1136 118" fill="none" stroke="#1E63B5" stroke-width="2" stroke-dasharray="5 6"/>
+<rect x="812" y="196" width="54" height="66" rx="3" fill="none" stroke="#1E63B5" stroke-width="2.5" opacity="0.35"/>
+<rect x="980" y="132" width="44" height="54" rx="3" fill="none" stroke="#1E63B5" stroke-width="2.5" opacity="0.6"/>
+<rect x="1112" y="94" width="36" height="44" rx="3" fill="none" stroke="#1E63B5" stroke-width="2.5" opacity="1"/>
+<rect x="900" y="196" width="78" height="64" rx="3" fill="none" stroke="#C26A00" stroke-width="2.5"/><rect x="900" y="178" width="62" height="18" rx="3" fill="#C26A00"/><text x="906" y="191" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#FBF8FF">forklift</text>
+<circle cx="1160" cy="222" r="11" fill="none" stroke="#522D80" stroke-width="2.5"/><circle cx="1160" cy="222" r="3.5" fill="#522D80"/>
+<circle cx="790" cy="68" r="5" fill="#FF8800"/><text x="802" y="73" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#645C75">CAM 03 · fixed</text>
+<rect x="770" y="312" width="446" height="10" rx="5" fill="#E6DEF3"/><rect x="840" y="312" width="96" height="10" rx="5" fill="#1F8F66"/><rect x="996" y="312" width="140" height="10" rx="5" fill="#1F8F66" opacity="0.6"/>
+<text x="770" y="342" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#645C75">00:00</text><text x="1216" y="342" text-anchor="end" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#645C75">8 tasks · 4 pillars · 3 domains</text>
+</svg>

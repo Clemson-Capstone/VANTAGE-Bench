@@ -87,7 +87,7 @@ with open('README.md', encoding="utf-8") as f:
 def do_setup():
     setup(
         name='vlmeval',
-        version='1.0.0',
+        version='1.1.0',
         description='VANTAGE-Bench: VLM Evaluation Suite for Physical AI',
         author='NVIDIA',
         author_email='',
