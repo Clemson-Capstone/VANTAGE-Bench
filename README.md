@@ -1,10 +1,7 @@
+<h1 align="center">VANTAGE-Bench</h1>
+
 <p align="center">
-  <a href="https://vantage-bench.org">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="assets/vantage-banner-dark.svg">
-      <img src="assets/vantage-banner-light.svg" alt="VANTAGE-Bench: Video Analysis Tasks Across Generalized Environments" width="100%">
-    </picture>
-  </a>
+  <b>V</b>ideo <b>AN</b>alysis <b>T</b>asks <b>A</b>cross <b>G</b>eneralized <b>E</b>nvironments
 </p>
 
 <p align="center">
@@ -26,26 +23,24 @@
   <a href="CHANGELOG.md"><b>Changelog</b></a>
 </p>
 
-# VANTAGE-Bench
-
 **VANTAGE-Bench** is a multi-task benchmark for evaluating Vision-Language Models on fixed-camera footage captured in operational environments: warehouses, transportation and smart spaces. This repository is the official harness. You run your model here, package the predictions, and upload them for scoring at [vantage-bench.org](https://vantage-bench.org).
 
 ## News
 
-- **[2026-10-06]** 🚀 **Harness v1.1.0** — native Gemini support, agentic skills, submission validation, faster DVC scoring. See the [changelog](CHANGELOG.md).
-- **[2026-09-30]** 🧰 Packaging works from any run mode, and `run.py` ends with a status table for every model and dataset. ([#5](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/5))
-- **[2026-09-08]** 📄 The VANTAGE-Bench paper is on arXiv: [2609.09396](https://arxiv.org/abs/2609.09396).
-- **[2026-08-19]** 🤖 Agentic skills: a coding agent can now run the whole pipeline, from data preparation to the portal form. ([#2](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/2))
-- **[2026-07-26]** ✨ Native support for Gemini 3.6 Flash and Gemini 3.5 Flash-Lite. ([#1](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/1))
+- **[2026-10-06]** Harness v1.1.0: native Gemini support, agentic skills, submission validation, faster DVC scoring. See the [changelog](CHANGELOG.md).
+- **[2026-09-30]** Packaging works from any run mode, and `run.py` ends with a status table for every model and dataset. ([#5](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/5))
+- **[2026-09-08]** The VANTAGE-Bench paper is on arXiv: [2609.09396](https://arxiv.org/abs/2609.09396).
+- **[2026-08-19]** Agentic skills: a coding agent can now run the whole pipeline, from data preparation to the portal form. ([#2](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/2))
+- **[2026-07-26]** Native support for Gemini 3.6 Flash and Gemini 3.5 Flash-Lite. ([#1](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/1))
 
 <details>
 <summary>Earlier news</summary>
 
-- **[2026-07-21]** 🏆 The leaderboard reaches 17 models with Gemini 3.6 Flash and Gemini 3.5 Flash-Lite.
-- **[2026-06-21]** 📦 The harness reads the public `nvidia/PhysicalAI-VANTAGE-Bench` dataset layout directly.
-- **[2026-06-01]** 🎤 VANTAGE-Bench is featured in Jensen Huang's keynote at NVIDIA GTC Taipei, with Cosmos 3 named the top open-weight model on the benchmark. ([NVIDIA blog](https://blogs.nvidia.com/blog/cosmos-3-physical-ai-open-world-foundation-model/))
-- **[2026-05-27]** 🎉 Harness v1.0.0 released and the leaderboard goes live.
-- **[2026-04-24]** 🗂️ The VANTAGE-Bench dataset is released on Hugging Face.
+- **[2026-07-21]** The leaderboard reaches 17 models with Gemini 3.6 Flash and Gemini 3.5 Flash-Lite.
+- **[2026-06-21]** The harness reads the public `nvidia/PhysicalAI-VANTAGE-Bench` dataset layout directly.
+- **[2026-06-01]** VANTAGE-Bench is featured in Jensen Huang's keynote at NVIDIA GTC Taipei, with Cosmos 3 named the top open-weight model on the benchmark. ([NVIDIA blog](https://blogs.nvidia.com/blog/cosmos-3-physical-ai-open-world-foundation-model/))
+- **[2026-05-27]** Harness v1.0.0 released and the leaderboard goes live.
+- **[2026-04-24]** The VANTAGE-Bench dataset is released on Hugging Face.
 
 </details>
 
@@ -82,10 +77,7 @@ The benchmark spans three deployment domains, **Warehouse**, **Transportation** 
 Unlike benchmarks built around curated internet media or short trimmed clips, VANTAGE-Bench emphasizes the perceptual and reasoning capabilities required for real-world Infrastructure AI systems, including localization, tracking, temporal reasoning, and grounded understanding of events.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/vantage-pillars-dark.svg">
-    <img src="assets/vantage-pillars-light.svg" alt="Four pillars and eight tasks: Semantic (Event Verification, Video QA), Spatial (Referring Expressions, Spatial Pointing, Object Localization), Temporal (Temporal Localization, Dense Video Captioning), Spatio-Temporal (Single Object Tracking)" width="100%">
-  </picture>
+  <img src="assets/vantage-bench-overview.png" alt="VANTAGE-Bench task taxonomy: three operational domains mapped through four reasoning pillars to eight tasks" width="90%">
 </p>
 
 ### Tasks and Primary Metrics
@@ -138,15 +130,7 @@ python scripts/package_submission.py --work-dir ./outputs/<model>/<eval_id> --ou
 
 ## End-to-End Flow
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/vantage-flow-dark.svg">
-    <img src="assets/vantage-flow-light.svg" alt="Workflow: prepare data with run_lmudata.py, run the model with run.py, validate with validate_submission.py, package with package_submission.py, upload at vantage-bench.org/submit" width="100%">
-  </picture>
-</p>
-
-<details>
-<summary><b>Participant flow in detail</b>: what happens from a fresh clone to a submitted result</summary>
+This section traces what happens from a fresh clone to a submitted result.
 
 ```
 git clone / pip install
@@ -179,8 +163,6 @@ scripts/package_submission.py          collects all *_submission.jsonl files fro
 upload submission.tar.gz               to https://vantage-bench.org/submit
                                        scores emailed back; 2 submissions/day · 30 lifetime
 ```
-
-</details>
 
 <details>
 <summary><b>Key code paths per task</b></summary>

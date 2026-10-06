@@ -33,7 +33,7 @@ More models, more ways to run them, and a smoother path from a fresh clone to a 
 
 ### Documentation
 
-- New README with a visual overview, a news section and collapsible reference material, plus this changelog.
+- Reorganised README with a news section, a supported-models table and collapsible reference material, plus this changelog.
 - Installation guidance for dependency and compiler setup, contributed by [@ulairii](https://github.com/ulairii). ([#4](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/4))
 - Developer guide, seven sample configs, the submission guides and the prompt guide.
 - Metric names, key code paths and dataset layouts in the docs match the code. ([#5](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/5))
