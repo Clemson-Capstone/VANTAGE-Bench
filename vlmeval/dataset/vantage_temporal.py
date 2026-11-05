@@ -29,6 +29,50 @@ from .utils import build_judge, DEBUG_MESSAGE
 FAIL_MSG = 'Failed to obtain answer via API.'
 
 
+# Pulls the event description out of a question, for a custom_prompt with "{event}".
+_TEMPORAL_PREFIX_VARIANTS = [
+    "Localize a series of activity events in the video, output the start and end timestamp"
+    " for each event. Provide the result in json format with 'mm:ss.ff' format for time"
+    " depiction for this event. Use keywords 'start' and 'end' in the json output.\n",
+    "Localize a series of activity events in the video, output the start and end timestamp"
+    " for each event. Provide the result in json format with 'mm:ss.ss' format for time"
+    " depiction for this event. Use keywords 'start' and 'end' in the json output.\n",
+]
+_TEMPORAL_TAIL_VARIANTS = [
+    " Answer the question only using start and end timestamps.",
+    " Convey your answer using start and end timestamps exclusively.",
+    " Provide a response using only start and end timestamps.",
+]
+_TEMPORAL_LEADING = re.compile(
+    r'^(?:When does?|When do|When is|When are'
+    r'|At what (?:time|point)(?: in the video)? does?'
+    r'|At which time does?'
+    r'|During what time(?: period)? does?'
+    r'|During what time(?: period)? do)\s+',
+    re.IGNORECASE,
+)
+_TEMPORAL_TRAILING = re.compile(
+    r'\s+(?:happen(?:\s+in the video)?'
+    r'|take place(?:\s+in the video)?'
+    r'|depicted in the video'
+    r'|occur(?:\s+in the video)?)\??$',
+    re.IGNORECASE,
+)
+
+
+def extract_event_description(question):
+    q = str(question)
+    for prefix in _TEMPORAL_PREFIX_VARIANTS:
+        q = q.replace(prefix, "")
+    for tail in _TEMPORAL_TAIL_VARIANTS:
+        q = q.replace(tail, "")
+    q = _TEMPORAL_LEADING.sub('', q.strip())
+    if q.startswith('"'):
+        m = re.match(r'"([^"]+)"', q)
+        return m.group(1) if m else q
+    return _TEMPORAL_TRAILING.sub('', q).strip()
+
+
 class VANTAGE_Temporal(VideoBaseDataset):
     """
     VANTAGE-Bench Temporal dataset for temporal localization in videos.
@@ -44,6 +88,8 @@ class VANTAGE_Temporal(VideoBaseDataset):
     TYPE = 'Video-Temporal-Localization'
 
     QUESTION_PREFIX = """Localize a series of activity events in the video, output the start and end timestamp for each event. Provide the result in json format with 'mm:ss.ss' format for time depiction for this event. Use keywords 'start' and 'end' in the json output."""
+
+    DEFAULT_PROMPT = """When does "{event}" happen in the video? Please provide the result in json format with 'mm:ss.ss' format for time depiction for the event. Use keywords 'start', 'end' in the json output."""
 
     def __init__(self, dataset='VANTAGE_Temporal', pack=False, nframe=0, fps=0, total_pixels=None, max_pixels=None, max_frames=None, test_mode=False, limit=None, verbose=False, random_state=None, include_categories=None, custom_prompt=None):
         self.test_mode = test_mode
@@ -298,8 +344,11 @@ class VANTAGE_Temporal(VideoBaseDataset):
         if self.fps > 0:
             process_video_kwargs['fps'] = self.fps
         question = line['question']
-        if self.custom_prompt is not None:
-            question = self.custom_prompt + "\n" + question
+        prompt = self.custom_prompt if self.custom_prompt is not None else self.DEFAULT_PROMPT
+        if '{event}' in prompt:
+            question = prompt.replace('{event}', extract_event_description(question))
+        else:
+            question = prompt + "\n" + question
 
         # if self.verbose:
         #     print(f"\n{'='*80}")
