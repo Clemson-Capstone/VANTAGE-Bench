@@ -1,36 +1,86 @@
 {
-    "_comment": "Cosmos-Reason2-8B via vLLM. Requires: pip install vllm qwen-vl-utils. Min GPU: 1x24GB VRAM.",
+    "_comment": "Settings behind our v1.0 leaderboard scores for Cosmos-Reason2-8B. vLLM, 1 GPU with 80 GB. Our EV runs also sent the system message 'You are a helpful assistant.', which Cosmos3vLLM cannot send. Run: python scripts/reproduce.py configs/cosmos_reason2_8b.json",
+    "name": "Cosmos-Reason2-8B",
     "model": {
-        "Cosmos-Reason2-8B": {
-            "class": "Cosmos",
-            "model_path": "nvidia/Cosmos-Reason2-8B",
-            "tensor_parallel_size": 1,
-            "max_model_len": 32768,
-            "gpu_memory_utilization": 0.90,
-            "enable_thinking": true,
-            "temperature": 0.6,
-            "top_p": 0.95,
-            "repetition_penalty": 1.05,
-            "max_new_tokens": 4096
-        }
+        "class": "Cosmos3vLLM",
+        "model_path": "nvidia/Cosmos-Reason2-8B",
+        "tensor_parallel_size": 1,
+        "max_model_len": 131072,
+        "temperature": 0,
+        "max_new_tokens": 8192
     },
-    "data": {
-        "VANTAGE_VQA_8frame": {},
-        "VANTAGE_EventVerification_8frame": {},
-        "VANTAGE_Temporal_8frame": {},
-        "VANTAGE_DVC_8frame": {},
-        "VANTAGE_SOT": {},
+    "tasks": {
+        "VANTAGE_VQA_4fps": {
+            "data": {
+                "class": "VANTAGE_VQA",
+                "dataset": "VANTAGE_VQA",
+                "fps": 4,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_EventVerification_4fps": {
+            "data": {
+                "class": "VANTAGE_EventVerification",
+                "dataset": "VANTAGE_EventVerification",
+                "fps": 4,
+                "max_frames": 256,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_Temporal_10fps": {
+            "data": {
+                "class": "VANTAGE_Temporal",
+                "dataset": "VANTAGE_Temporal",
+                "fps": 10,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_DVC_4fps": {
+            "data": {
+                "class": "VANTAGE_DVC",
+                "dataset": "VANTAGE_DVC",
+                "fps": 4,
+                "max_frames": 128,
+                "total_pixels": 8388608
+            },
+            "model": {
+                "max_new_tokens": 16384
+            }
+        },
+        "VANTAGE_SOT": {
+            "data": {
+                "class": "VANTAGE_SOT",
+                "dataset": "VANTAGE_SOT",
+                "model_family": "cr"
+            }
+        },
         "VANTAGE_2DGrounding": {
-            "class": "VANTAGE_2DGroundingDataset",
-            "dataset": "VANTAGE_2DGrounding"
+            "data": {
+                "class": "VANTAGE_2DGroundingDataset",
+                "dataset": "VANTAGE_2DGrounding"
+            },
+            "model": {
+                "max_new_tokens": 4096
+            }
         },
         "VANTAGE_2DPointing": {
-            "class": "VANTAGE_2DPointing",
-            "dataset": "VANTAGE_2DPointing"
+            "data": {
+                "class": "VANTAGE_2DPointing",
+                "dataset": "VANTAGE_2DPointing"
+            },
+            "model": {
+                "max_new_tokens": 512
+            }
         },
         "Astro2D": {
-            "class": "Astro2DDetectionDataset",
-            "dataset": "Astro2D"
+            "data": {
+                "class": "Astro2DDetectionDataset",
+                "dataset": "Astro2D"
+            }
         }
     }
 }

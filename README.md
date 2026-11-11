@@ -52,6 +52,7 @@ Every release is described in [`CHANGELOG.md`](CHANGELOG.md). New models and ann
 - [Quick Start](#quick-start)
 - [End-to-End Flow](#end-to-end-flow)
 - [Benchmarks](#benchmarks)
+  - [Standard run settings](#standard-run-settings)
 - [Supported Models](#supported-models)
 - [Installation](#installation)
 - [Dataset Setup](#dataset-setup)
@@ -111,7 +112,7 @@ python scripts/run_lmudata.py --all --lmu-root ~/LMUData
 export LMUData=~/LMUData
 export OPENAI_API_KEY=<your-key>                # if using an API model
 python run.py \
-  --data VANTAGE_VQA_8frame \
+  --data VANTAGE_VQA_4fps \
   --model GPT4o \
   --work-dir ./outputs
 
@@ -188,10 +189,10 @@ VANTAGE covers eight tasks across video and image modalities. Each benchmark is 
 
 | Benchmark | Task | Metrics | Dataset key (example) |
 |-----------|------|---------|----------------------|
-| **VANTAGE-VQA** | Multiple-choice video question answering | Accuracy | `VANTAGE_VQA_8frame` |
-| **VANTAGE-Temporal** | Temporal event localization | mIoU, Precision@0.5 | `VANTAGE_Temporal_8frame` |
-| **VANTAGE-DVC** | Dense video captioning | SODA_c, mIoU, IoU-F1, BERTScore-F1 | `VANTAGE_DVC_8frame` |
-| **VANTAGE-EventVerification** | Binary event physics verification (Yes/No) | Macro F1, Accuracy, Balanced Accuracy | `VANTAGE_EventVerification_8frame` |
+| **VANTAGE-VQA** | Multiple-choice video question answering | Accuracy | `VANTAGE_VQA_4fps` |
+| **VANTAGE-Temporal** | Temporal event localization | mIoU, Precision@0.5 | `VANTAGE_Temporal_10fps` |
+| **VANTAGE-DVC** | Dense video captioning | SODA_c, mIoU, IoU-F1, BERTScore-F1 | `VANTAGE_DVC_4fps` |
+| **VANTAGE-EventVerification** | Binary event physics verification (Yes/No) | Macro F1, Accuracy, Balanced Accuracy | `VANTAGE_EventVerification_4fps` |
 | **VANTAGE-SOT** | Single-object tracking across frames | Success AUC, mIoU, Precision@0.5 | `VANTAGE_SOT` |
 
 ### Image Benchmarks
@@ -204,16 +205,35 @@ VANTAGE covers eight tasks across video and image modalities. Each benchmark is 
 
 All dataset keys and their frame/fps variants are listed in [All Registered Dataset Names](#all-registered-dataset-names).
 
+### Standard run settings
+
+The leaderboard numbers use these dataset keys. To reproduce them or compare against them, use the same keys. The commands in this README and the configs in [`configs/`](configs/) already do.
+
+| Task | `--data` key | Frame sampling | Pixel limits |
+|------|--------------|----------------|--------------|
+| VQA | `VANTAGE_VQA_4fps` | 4 fps, up to 256 frames | 921,600 per frame, 16,777,216 per video |
+| Event Verification | `VANTAGE_EventVerification_4fps` | 4 fps, up to 256 frames | 16,777,216 per video |
+| Temporal Localization | `VANTAGE_Temporal_10fps` | 10 fps, up to 256 frames | 921,600 per frame, 16,777,216 per video |
+| Dense Video Captioning | `VANTAGE_DVC_4fps` | 4 fps, up to 128 frames | 8,388,608 per video |
+| Single Object Tracking | `VANTAGE_SOT` | 8 frames, stride 15 | — |
+| 2D Grounding, 2D Pointing, Astro2D | `VANTAGE_2DGrounding`, `VANTAGE_2DPointing`, `Astro2D` | single image | — |
+
+`run.py` does not set output-token limits, so a plain run uses each model's own default. The leaderboard runs used 512 for 2D Pointing, 4,096 for 2D Grounding, 8,192 for VQA, Event Verification and Temporal Localization, and 16,384 for Dense Video Captioning. Single Object Tracking used 8,192 for the Cosmos models and 16,384 or 32,768 for the Qwen models. The configs in [`configs/`](configs/) set these per task. A lower limit can cut off long DVC and SOT answers.
+
+Frame sampling, pixel limits and prompts are fixed by the dataset keys above. Model settings (sampling, output-token limits, backend) are up to you: the registered `--model` keys keep their library defaults. To reproduce a specific model's leaderboard scores, including its per-task model settings and prompts, use the configs in [`configs/`](configs/) (Qwen3-VL, Qwen3.5, Cosmos-Reason2-8B, Cosmos3-Nano/Super) with `python scripts/reproduce.py configs/<model>.json`.
+
+The `_8frame`, `_16frame`, `_64frame` and other fps keys stay registered for ablations. A submission run on one of them is scored the same way, but it isn't comparable with the leaderboard.
+
 ## Supported Models
 
 Pass any key of `supported_VLM` in [`vlmeval/config.py`](vlmeval/config.py) as `--model`. The families below are the ones used for the leaderboard; every model that VLMEvalKit supports is also available.
 
-| Family | Example `--model` keys | Backend | Sample config |
+| Family | Example `--model` keys | Backend | Leaderboard config |
 |--------|------------------------|---------|---------------|
-| **NVIDIA Cosmos** | `Cosmos3-Nano`, `Cosmos-Reason2-8B`, `Cosmos-Reason2-32B`, `Cosmos-Reason1-7B`, `Cosmos-Reason2-8B-HF`, `Cosmos-Reason2-8B-API` | HuggingFace, vLLM, API | [`configs/`](configs/README.md) |
+| **NVIDIA Cosmos** | `Cosmos3-Nano-vLLM`, `CosmosReason2-8B-vLLM`, `CosmosReason2-32B-vLLM` (the backend our runs used); also `Cosmos3-Nano`, `Cosmos-Reason2-8B`, `Cosmos-Reason1-7B`, `Cosmos-Reason2-8B-HF`, `Cosmos-Reason2-8B-API` | HuggingFace, vLLM, API | [`cosmos3_nano`](configs/cosmos3_nano.json), [`cosmos3_super`](configs/cosmos3_super.json), [`cosmos_reason2_8b`](configs/cosmos_reason2_8b.json) |
 | **Google Gemini** | `GeminiFlash3-6`, `GeminiFlash3-5-Lite`, `GeminiPro3-1`, `GeminiFlash3-1-Lite` | API (`GEMINI_API_KEY` or `GOOGLE_API_KEY`) | — |
-| **Qwen** | `Qwen3-VL-8B-Instruct`, `Qwen3-VL-32B-Instruct`, `Qwen3.5-9B`, `Qwen3.5-27B` | vLLM (default), HuggingFace | — |
-| **OpenAI** | `GPT4o` | API (`OPENAI_API_KEY`) | [`configs/gpt4o.json`](configs/gpt4o.json) |
+| **Qwen** | `Qwen3-VL-8B-Instruct`, `Qwen3-VL-32B-Instruct`, `Qwen3.5-9B`, `Qwen3.5-27B` | vLLM (default), HuggingFace | [`qwen3_vl_8b`](configs/qwen3_vl_8b.json), [`qwen3_vl_32b`](configs/qwen3_vl_32b.json), [`qwen3_5_9b`](configs/qwen3_5_9b.json), [`qwen3_5_27b`](configs/qwen3_5_27b.json) |
+| **OpenAI** | `GPT4o` | API (`OPENAI_API_KEY`) | — |
 
 To list every registered model name:
 
@@ -221,7 +241,7 @@ To list every registered model name:
 python -c "from vlmeval.config import supported_VLM; print(list(supported_VLM.keys()))"
 ```
 
-To add your own model, see [Model Backends](#model-backends) and the registration section of [`docs/vantage/DEVELOPER_GUIDE.md`](docs/vantage/DEVELOPER_GUIDE.md). GPU and package requirements for each sample config are in [`configs/README.md`](configs/README.md).
+To add your own model, see [Model Backends](#model-backends) and the registration section of [`docs/vantage/DEVELOPER_GUIDE.md`](docs/vantage/DEVELOPER_GUIDE.md). The configs in [`configs/`](configs/README.md) hold the exact settings behind the leaderboard scores and run with `python scripts/reproduce.py configs/<model>.json`; their README lists the GPU and API requirements.
 
 ## Installation
 
@@ -356,13 +376,13 @@ All commands run from the repository root. Replace `<ModelName>` with any key fr
 ### Run inference + evaluation together
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <ModelName> --verbose
+python run.py --data VANTAGE_VQA_4fps --model <ModelName> --verbose
 ```
 
 ### Run inference only (no evaluation)
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <ModelName> --mode infer --work-dir ./outputs
+python run.py --data VANTAGE_VQA_4fps --model <ModelName> --mode infer --work-dir ./outputs
 ```
 
 ### Run evaluation only (from existing prediction file)
@@ -370,14 +390,14 @@ python run.py --data VANTAGE_VQA_8frame --model <ModelName> --mode infer --work-
 Prediction files do **not** need to contain ground-truth columns — the evaluator resolves GT from the dataset TSV at evaluation time.
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <ModelName> --mode eval --reuse --work-dir ./outputs
+python run.py --data VANTAGE_VQA_4fps --model <ModelName> --mode eval --reuse --work-dir ./outputs
 ```
 
 ### Run multiple benchmarks at once
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame VANTAGE_Temporal_8frame VANTAGE_DVC_8frame VANTAGE_EventVerification_8frame \
+  --data VANTAGE_VQA_4fps VANTAGE_Temporal_10fps VANTAGE_DVC_4fps VANTAGE_EventVerification_4fps \
   --model <ModelName> \
   --verbose
 ```
@@ -400,7 +420,7 @@ Every CLI flag and environment variable is listed in [`docs/vantage/DEVELOPER_GU
 
 ## All Registered Dataset Names
 
-Pass any of these strings as the `--data` argument. The default key for each task is the first row of its table.
+Pass any of these strings as the `--data` argument. The key marked **standard** in each table is the one the leaderboard uses (see [Standard run settings](#standard-run-settings)). The other keys are for ablations.
 
 <details open>
 <summary><b>VANTAGE-VQA</b></summary>
@@ -410,7 +430,7 @@ Pass any of these strings as the `--data` argument. The default key for each tas
 | `VANTAGE_VQA_8frame` | 8 frames uniformly sampled |
 | `VANTAGE_VQA_16frame` | 16 frames |
 | `VANTAGE_VQA_64frame` | 64 frames |
-| `VANTAGE_VQA_4fps` | 4 frames per second |
+| `VANTAGE_VQA_4fps` | **standard**: 4 fps, up to 256 frames, 921,600 px per frame, 16,777,216 px in total |
 | `VANTAGE_VQA_1fps` | 1 frame per second |
 | `VANTAGE_VQA_0.5fps` | 0.5 fps |
 | `VANTAGE_VQA_8frame_200` | 8 frames, 200-sample subset (seed 42) |
@@ -427,7 +447,7 @@ Pass any of these strings as the `--data` argument. The default key for each tas
 | `VANTAGE_Temporal_64frame` | 64 frames |
 | `VANTAGE_Temporal_1fps` | 1 fps |
 | `VANTAGE_Temporal_0.5fps` | 0.5 fps |
-| `VANTAGE_Temporal_10fps` | 10 fps |
+| `VANTAGE_Temporal_10fps` | **standard**: 10 fps, up to 256 frames, 921,600 px per frame, 16,777,216 px in total |
 
 </details>
 
@@ -440,7 +460,7 @@ Pass any of these strings as the `--data` argument. The default key for each tas
 | `VANTAGE_DVC_64frame` | 64 frames |
 | `VANTAGE_DVC_1fps` | 1 fps |
 | `VANTAGE_DVC_2fps` | 2 fps |
-| `VANTAGE_DVC_4fps` | 4 fps |
+| `VANTAGE_DVC_4fps` | **standard**: 4 fps, up to 128 frames, 8,388,608 px in total |
 
 </details>
 
@@ -452,7 +472,7 @@ Pass any of these strings as the `--data` argument. The default key for each tas
 | `VANTAGE_EventVerification_8frame` | 8 frames |
 | `VANTAGE_EventVerification_16frame` | 16 frames |
 | `VANTAGE_EventVerification_1fps` | 1 fps |
-| `VANTAGE_EventVerification_4fps` | 4 fps |
+| `VANTAGE_EventVerification_4fps` | **standard**: 4 fps, up to 256 frames, 16,777,216 px in total |
 
 **Note:** The EventVerification class defaults to `fps=4`. All registered variants override this with `fps=0` when using frame-count-based sampling. If you instantiate the class directly, pass `fps=0` alongside `nframe` to avoid unexpected behavior.
 
@@ -463,7 +483,7 @@ Pass any of these strings as the `--data` argument. The default key for each tas
 
 | Key | Notes |
 |-----|-------|
-| `VANTAGE_SOT` | Default: 8 frames, stride 15 |
+| `VANTAGE_SOT` | **standard**: 8 frames, stride 15 |
 | `VANTAGE_SOT_16f` | 16 frames |
 | `VANTAGE_SOT_32f` | 32 frames |
 
@@ -504,8 +524,8 @@ Submission JSONL files are written during the **evaluation phase**. Use the defa
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame VANTAGE_EventVerification_8frame \
-         VANTAGE_Temporal_8frame VANTAGE_DVC_8frame VANTAGE_SOT \
+  --data VANTAGE_VQA_4fps VANTAGE_EventVerification_4fps \
+         VANTAGE_Temporal_10fps VANTAGE_DVC_4fps VANTAGE_SOT \
          VANTAGE_2DGrounding VANTAGE_2DPointing Astro2D \
   --model <YourModel> --work-dir ./outputs
 ```
@@ -556,13 +576,13 @@ export OPENAI_API_KEY=your-key
 Then run with any API-backed model name from `vlmeval/config.py`:
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <ApiModelName>
+python run.py --data VANTAGE_VQA_4fps --model <ApiModelName>
 ```
 
 ### 2. Local HuggingFace model
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <HFModelName>
+python run.py --data VANTAGE_VQA_4fps --model <HFModelName>
 ```
 
 Model weights are loaded from HuggingFace Hub by default. Set `HF_HUB_CACHE` to control the local cache directory.
@@ -591,7 +611,7 @@ Use a config file to pass `use_vllm` and `tensor_parallel_size`:
         }
     },
     "data": {
-        "VANTAGE_VQA_8frame": {}
+        "VANTAGE_VQA_4fps": {}
     }
 }
 ```
@@ -607,17 +627,17 @@ python run.py --config my_config.json
 ```
 ./outputs/
 └── <model_name>/
-    ├── <model>_VANTAGE_VQA_8frame.xlsx              ← symlink to latest run
-    ├── <model>_VANTAGE_VQA_8frame_submission.jsonl  ← symlink to latest run
+    ├── <model>_VANTAGE_VQA_4fps.xlsx              ← symlink to latest run
+    ├── <model>_VANTAGE_VQA_4fps_submission.jsonl  ← symlink to latest run
     └── T<YYYYMMDD>_G<hash>/                         ← timestamped run folder
-        ├── <model>_VANTAGE_VQA_8frame.xlsx              # raw predictions
-        ├── <model>_VANTAGE_VQA_8frame_submission.jsonl  # bundle this for upload
-        ├── <model>_VANTAGE_Temporal_8frame.xlsx
-        ├── <model>_VANTAGE_Temporal_8frame_submission.jsonl
-        ├── <model>_VANTAGE_DVC_8frame.xlsx
-        ├── <model>_VANTAGE_DVC_8frame_submission.jsonl
+        ├── <model>_VANTAGE_VQA_4fps.xlsx              # raw predictions
+        ├── <model>_VANTAGE_VQA_4fps_submission.jsonl  # bundle this for upload
+        ├── <model>_VANTAGE_Temporal_10fps.xlsx
+        ├── <model>_VANTAGE_Temporal_10fps_submission.jsonl
+        ├── <model>_VANTAGE_DVC_4fps.xlsx
+        ├── <model>_VANTAGE_DVC_4fps_submission.jsonl
         ├── model_config.txt                             # model __dict__ dump
-        └── VANTAGE_VQA_8frame_config.json               # dataset config dump
+        └── VANTAGE_VQA_4fps_config.json               # dataset config dump
 ```
 
 VANTAGE public tasks do **not** produce local metric files (`_acc.csv`, `_metrics.json`) because ground truth is withheld from the public dataset. The `*_submission.jsonl` files are what you package and upload for server-side scoring. A run with `--mode infer` names them `<model>_<dataset>.submission.jsonl`; the packager accepts both names.
@@ -717,7 +737,7 @@ vlmeval/
 | [`SUBMISSION.md`](SUBMISSION.md) | Quick submission reference: 3-step flow, pillar table, packaging, form fields |
 | [`docs/vantage/SUBMISSION.md`](docs/vantage/SUBMISSION.md) | Full submission guide: JSONL record format, canonical IDs, troubleshooting |
 | [`docs/vantage/DEVELOPER_GUIDE.md`](docs/vantage/DEVELOPER_GUIDE.md) | File-to-file map, all CLI flags, all env vars, model registration paths |
-| [`configs/README.md`](configs/README.md) | Sample config files for supported models; GPU/package requirements table |
+| [`configs/README.md`](configs/README.md) | Leaderboard configs with the exact settings per model; GPU and API requirements |
 | [`scripts/README.md`](scripts/README.md) | What each participant script does |
 | [`docs/vantage/VANTAGEEvalInputs.md`](docs/vantage/VANTAGEEvalInputs.md) | Minimum prediction-file columns required by each evaluator |
 | [`README_VANTAGE.md`](README_VANTAGE.md) | Extended reference: config files, per-model parameter passing, all dataset keys |

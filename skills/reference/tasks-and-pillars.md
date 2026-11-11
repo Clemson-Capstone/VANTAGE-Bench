@@ -7,13 +7,13 @@ file, you are the only place it needs to change.
 
 | Pillar | Task (short key) | Default dataset key | Primary metric | Submission filename |
 |---|---|---|---|---|
-| I — Semantic | `vqa` | `VANTAGE_VQA_8frame` | Top-1 Accuracy | `vqa.jsonl` |
-| I — Semantic | `event_verification` | `VANTAGE_EventVerification_8frame` | Macro F1 | `event_verification.jsonl` |
+| I — Semantic | `vqa` | `VANTAGE_VQA_4fps` | Top-1 Accuracy | `vqa.jsonl` |
+| I — Semantic | `event_verification` | `VANTAGE_EventVerification_4fps` | Macro F1 | `event_verification.jsonl` |
 | II — Spatial | `grounding` | `VANTAGE_2DGrounding` | mIoU | `grounding.jsonl` |
 | II — Spatial | `pointing` | `VANTAGE_2DPointing` | Top-1 Accuracy | `pointing.jsonl` |
 | II — Spatial | `astro` | `Astro2D` | F1@0.5 | `astro.jsonl` |
-| III — Temporal | `temporal` | `VANTAGE_Temporal_8frame` | mIoU | `temporal.jsonl` |
-| III — Temporal | `dvc` | `VANTAGE_DVC_8frame` | SODAc | `dvc.jsonl` |
+| III — Temporal | `temporal` | `VANTAGE_Temporal_10fps` | mIoU | `temporal.jsonl` |
+| III — Temporal | `dvc` | `VANTAGE_DVC_4fps` | SODAc | `dvc.jsonl` |
 | IV — Spatio-Temporal | `sot` | `VANTAGE_SOT` | Success AUC | `sot.jsonl` |
 
 This is the same map `scripts/package_submission.py`'s `PILLAR_TASKS`/`TASK_PATTERNS` encode
@@ -22,14 +22,15 @@ than re-deriving it here.
 
 ## All registered dataset keys (`--data` values)
 
-Full list and per-key sampling notes: `README_VANTAGE.md` §4. Skills default to the
-**8frame / default** variant per task unless the user asks for a different sampling rate:
+Full list and per-key sampling notes: `README_VANTAGE.md` §4. Skills use the **standard**
+key per task (the leaderboard settings, see "Standard run settings" in `README.md`) unless the
+user asks for a different sampling rate:
 
-- VQA: `VANTAGE_VQA_8frame` (default), `_16frame`, `_64frame`, `_4fps`, `_1fps`, `_0.5fps`, `_8frame_200` (200-sample smoke-test subset)
-- Temporal: `VANTAGE_Temporal_8frame` (default), `_16frame`, `_64frame`, `_1fps`, `_0.5fps`, `_10fps`
-- DVC: `VANTAGE_DVC_8frame` (default), `_64frame`, `_1fps`, `_2fps`, `_4fps`
-- EventVerification: `VANTAGE_EventVerification_8frame` (default), `_16frame`, `_1fps`, `_4fps`
-- SOT: `VANTAGE_SOT` (default, 8f/stride15), `_16f`, `_32f`
+- VQA: `VANTAGE_VQA_4fps` (standard), `_8frame`, `_16frame`, `_64frame`, `_1fps`, `_0.5fps`, `_8frame_200` (200-sample smoke-test subset)
+- Temporal: `VANTAGE_Temporal_10fps` (standard), `_8frame`, `_16frame`, `_64frame`, `_1fps`, `_0.5fps`
+- DVC: `VANTAGE_DVC_4fps` (standard), `_8frame`, `_64frame`, `_1fps`, `_2fps`
+- EventVerification: `VANTAGE_EventVerification_4fps` (standard), `_8frame`, `_16frame`, `_1fps`
+- SOT: `VANTAGE_SOT` (standard, 8f/stride15), `_16f`, `_32f`
 - Image (no frame variants): `VANTAGE_2DGrounding`, `VANTAGE_2DPointing`, `Astro2D`
 
 **Config-file requirement:** video-task keys above are in `supported_video_datasets` and can be

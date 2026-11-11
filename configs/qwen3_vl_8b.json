@@ -1,0 +1,101 @@
+{
+    "_comment": "Settings behind our v1.0 leaderboard scores for Qwen3-VL-8B-Instruct. vLLM, 1 GPU with 80 GB. Run: python scripts/reproduce.py configs/qwen3_vl_8b.json",
+    "name": "Qwen3-VL-8B-Instruct",
+    "model": {
+        "class": "Qwen3VLChat",
+        "model_path": "Qwen/Qwen3-VL-8B-Instruct",
+        "use_vllm": true,
+        "use_custom_prompt": false,
+        "temperature": 0.7,
+        "top_p": 0.8,
+        "top_k": 20,
+        "repetition_penalty": 1.0,
+        "presence_penalty": 1.5,
+        "max_new_tokens": 8192,
+        "chat_template_kwargs": {
+            "enable_thinking": false
+        }
+    },
+    "tasks": {
+        "VANTAGE_VQA_4fps": {
+            "data": {
+                "class": "VANTAGE_VQA",
+                "dataset": "VANTAGE_VQA",
+                "fps": 4,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_EventVerification_4fps": {
+            "data": {
+                "class": "VANTAGE_EventVerification",
+                "dataset": "VANTAGE_EventVerification",
+                "fps": 4,
+                "max_frames": 256,
+                "total_pixels": 16777216
+            },
+            "model": {
+                "system_prompt": "You are a helpful assistant."
+            }
+        },
+        "VANTAGE_Temporal_10fps": {
+            "data": {
+                "class": "VANTAGE_Temporal",
+                "dataset": "VANTAGE_Temporal",
+                "fps": 10,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_DVC_4fps": {
+            "data": {
+                "class": "VANTAGE_DVC",
+                "dataset": "VANTAGE_DVC",
+                "fps": 4,
+                "max_frames": 128,
+                "total_pixels": 8388608
+            },
+            "model": {
+                "max_new_tokens": 16384
+            }
+        },
+        "VANTAGE_SOT": {
+            "data": {
+                "class": "VANTAGE_SOT",
+                "dataset": "VANTAGE_SOT",
+                "model_family": "qwen3"
+            },
+            "model": {
+                "temperature": 0.0,
+                "max_new_tokens": 16384,
+                "max_model_len": 131072
+            }
+        },
+        "VANTAGE_2DGrounding": {
+            "data": {
+                "class": "VANTAGE_2DGroundingDataset",
+                "dataset": "VANTAGE_2DGrounding"
+            },
+            "model": {
+                "max_new_tokens": 4096
+            }
+        },
+        "VANTAGE_2DPointing": {
+            "data": {
+                "class": "VANTAGE_2DPointing",
+                "dataset": "VANTAGE_2DPointing"
+            },
+            "model": {
+                "max_new_tokens": 512
+            }
+        },
+        "Astro2D": {
+            "data": {
+                "class": "Astro2DDetectionDataset",
+                "dataset": "Astro2D"
+            }
+        }
+    }
+}

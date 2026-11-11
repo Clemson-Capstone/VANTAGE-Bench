@@ -70,6 +70,9 @@ class VANTAGE_VQA(VideoBaseDataset):
         "Answer the question based only on the visual content of the image."
     )
 
+    # Leaderboard prompt, used when no custom_prompt is given. {options} becomes one "A. ..." line per option.
+    DEFAULT_PROMPT = "Question: {question}\nSelect your answer from the choices below:\n{options}Respond with ONLY the letter corresponding to your answer (A, B, C, or D). Do not provide any explanation or other text.\n"
+
     def __init__(self, dataset='VANTAGE_VQA', pack=False, nframe=0, fps=-1, total_pixels=None,
                  max_pixels=None, max_frames=None, test_mode=False, limit=None, verbose=False,
                  random_state=None, include_categories=None, include_task_types=None, custom_prompt=None):
@@ -395,6 +398,15 @@ class VANTAGE_VQA(VideoBaseDataset):
         # --- Fallback: return raw TSV question unchanged ---
         if not options or base_question is None:
             return raw_question, base_question or raw_question, [], raw_question
+
+        # A custom_prompt containing {question} is a full template; {options} becomes one "A. ..." line per option.
+        # Without a custom_prompt the leaderboard template (DEFAULT_PROMPT) is used.
+        custom = getattr(self, 'custom_prompt', None) or self.DEFAULT_PROMPT
+        if custom and '{question}' in custom:
+            option_block = ''.join(
+                c + '. ' + str(options[i]) + '\n' for i, c in enumerate(option_labels[:len(options)]))
+            prompt = custom.replace('{question}', base_question).replace('{options}', option_block)
+            return prompt, base_question, options, raw_question
 
         prompt = self.QUESTION_PREFIX + '\n'
         prompt += 'Question: ' + base_question + '\n'

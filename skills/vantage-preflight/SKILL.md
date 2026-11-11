@@ -31,7 +31,7 @@ Only propose this for a `warning`/`blocker` on GPU/VRAM; don't second-guess an `
 | 1 GPU, < 16 GB | Local HF, small model (e.g. `Cosmos3-Nano`, 1×8GB) | Check `README_VANTAGE.md` §12 for the model's minimum VRAM. |
 | 1 GPU, 16-24 GB | Local HF (`CosmosHF`) or local vLLM `tensor_parallel_size=1` | |
 | 1 GPU, ≥ 24 GB | Local vLLM, `tensor_parallel_size=1` | |
-| N GPUs (N > 1) | Local vLLM, `tensor_parallel_size=N` | Must divide evenly into the model's attention heads (`configs/README.md`). If N isn't a clean divisor for the target model, use the largest power-of-2 divisor of N (e.g. 6 GPUs → 4, leaving 2 idle) rather than guessing an odd size. |
+| N GPUs (N > 1) | Local vLLM, `tensor_parallel_size=N` | Must divide evenly into the model's attention heads. If N isn't a clean divisor for the target model, use the largest power-of-2 divisor of N (e.g. 6 GPUs → 4, leaving 2 idle) rather than guessing an odd size. |
 
 ## Installs — gate: confirm with the user before running any pip/conda command
 

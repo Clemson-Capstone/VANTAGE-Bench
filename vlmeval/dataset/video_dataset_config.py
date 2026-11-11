@@ -198,6 +198,10 @@ vsibench_dataset = {
     'vsibench_64frame': partial(VSIBench, dataset='VSIBench', nframe=64),
 }
 
+# Standard VANTAGE-Bench run settings (the ones behind the leaderboard):
+#   VANTAGE_VQA_4fps, VANTAGE_EventVerification_4fps, VANTAGE_Temporal_10fps,
+#   VANTAGE_DVC_4fps, VANTAGE_SOT. Keep their arguments in sync with the
+#   "Standard run settings" table in README.md. The other variants are ablations.
 vantage_vqa_dataset = {
     'VANTAGE_VQA_8frame': partial(VANTAGE_VQA, dataset='VANTAGE_VQA', nframe=8),
     'VANTAGE_VQA_16frame': partial(VANTAGE_VQA, dataset='VANTAGE_VQA', nframe=16),
@@ -214,7 +218,7 @@ vantage_temporal_dataset = {
     'VANTAGE_Temporal_64frame': partial(VANTAGE_Temporal, dataset='VANTAGE_Temporal', nframe=64, total_pixels=8192 * 32 * 32, max_frames=256),
     'VANTAGE_Temporal_1fps': partial(VANTAGE_Temporal, dataset='VANTAGE_Temporal', fps=1.0, total_pixels=16384 * 32 * 32, max_frames=256),
     'VANTAGE_Temporal_0.5fps': partial(VANTAGE_Temporal, dataset='VANTAGE_Temporal', fps=0.5, total_pixels=16384 * 32 * 32, max_frames=256),
-    'VANTAGE_Temporal_10fps': partial(VANTAGE_Temporal, dataset='VANTAGE_Temporal', fps=10.0, total_pixels=16384 * 32 * 32, max_frames=256),
+    'VANTAGE_Temporal_10fps': partial(VANTAGE_Temporal, dataset='VANTAGE_Temporal', fps=10.0, total_pixels=16384 * 32 * 32, max_pixels=921600, max_frames=256),
 }
 
 vantage_dvc_dataset = {
@@ -230,7 +234,7 @@ vantage_event_verification_dataset = {
     'VANTAGE_EventVerification_8frame': partial(VANTAGE_EventVerification, dataset='VANTAGE_EventVerification', nframe=8, fps=0, total_pixels=8192 * 32 * 32, max_frames=256),
     'VANTAGE_EventVerification_16frame': partial(VANTAGE_EventVerification, dataset='VANTAGE_EventVerification', nframe=16, fps=0, total_pixels=8192 * 32 * 32, max_frames=256),
     'VANTAGE_EventVerification_1fps': partial(VANTAGE_EventVerification, dataset='VANTAGE_EventVerification', fps=1.0, total_pixels=16384 * 32 * 32, max_frames=256),
-    'VANTAGE_EventVerification_4fps': partial(VANTAGE_EventVerification, dataset='VANTAGE_EventVerification', fps=4.0, total_pixels=8388608, max_frames=256),
+    'VANTAGE_EventVerification_4fps': partial(VANTAGE_EventVerification, dataset='VANTAGE_EventVerification', fps=4.0, total_pixels=16384 * 32 * 32, max_frames=256),
 }
 
 vantage_sot_dataset = {

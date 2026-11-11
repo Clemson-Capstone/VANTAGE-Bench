@@ -1,78 +1,41 @@
-# Sample Configs
+# Leaderboard configs
 
-Each JSON file here is a ready-to-use config for `run.py --config`. Every config runs **all eight VANTAGE tasks** at once.
+Each config here holds the exact settings behind our leaderboard scores for one model: the model settings, the per-task overrides, the dataset sampling and the prompts.
 
-## Usage
+| Config | Model | Backend |
+|---|---|---|
+| `qwen3_vl_8b.json` | Qwen3-VL-8B-Instruct | vLLM, 1 × 80 GB |
+| `qwen3_vl_32b.json` | Qwen3-VL-32B-Instruct | vLLM, 2 × 80 GB |
+| `qwen3_5_9b.json` | Qwen3.5-9B | vLLM ≥ 0.23, 1 × 80 GB |
+| `qwen3_5_27b.json` | Qwen3.5-27B | vLLM ≥ 0.23, 2 × 80 GB |
+| `cosmos_reason2_8b.json` | Cosmos-Reason2-8B | vLLM, 1 × 80 GB |
+| `cosmos3_nano.json` | Cosmos3-Nano | vLLM, 2 × 80 GB, converted weights |
+| `cosmos3_super.json` | Cosmos3-Super | vLLM, 2 × 80 GB, converted weights |
+
+All configs use the built-in prompts, which are the prompts behind our scores (see `prompt_guide.md`).
+
+## Run
 
 ```bash
-export LMUData=/path/to/data      # where datasets are cached
-python run.py --config configs/<model>.json --work-dir ./outputs
+export LMUData=/path/to/data
+python scripts/reproduce.py configs/qwen3_vl_8b.json
+python scripts/reproduce.py configs/qwen3_vl_8b.json --tasks VANTAGE_VQA_4fps   # one task
+python scripts/reproduce.py configs/qwen3_vl_8b.json --dry-run                  # check only
 ```
 
-To run a subset of tasks, remove entries from the `"data"` block.
+Some tasks need different model settings. For example, dense captioning and tracking need a larger output limit, and the Qwen models track at a low temperature. `run.py --config` applies one set of model settings to every dataset, so `reproduce.py` groups the tasks that share settings and runs one `run.py` call per group. The model therefore loads once per group: six times for the Qwen models and four times for the Cosmos models. All groups write to `outputs/<name>/`, so `scripts/package_submission.py` packages them as one submission. Arguments that `reproduce.py` does not know are passed to `run.py`.
 
----
+### Cosmos3 weights
 
-## Available Configs
+vLLM cannot load the nvidia/Cosmos3-Nano and nvidia/Cosmos3-Super checkpoints directly. Our runs loaded a conversion of each one to the Qwen3-VL format (`Qwen3VLForConditionalGeneration`). Convert the checkpoint yourself, then set `model_path` in `cosmos3_nano.json` or `cosmos3_super.json` to the converted folder. The configs default to `converted/Cosmos3-<Nano|Super>-qwen3vl`, relative to the repository root.
 
-| File | Model | Backend | GPU | Extra packages | Env vars required |
-|---|---|---|---|---|---|
-| `cosmos_reason2_8b.json` | Cosmos-Reason2-8B | vLLM | 1 × 24 GB | `vllm`, `qwen-vl-utils` | — |
-| `cosmos_reason2_32b.json` | Cosmos-Reason2-32B | vLLM | 2 × 80 GB (or 4 × 40 GB) | `vllm`, `qwen-vl-utils` | — |
-| `cosmos_reason1_7b.json` | Cosmos-Reason1-7B | vLLM | 1 × 16 GB | `vllm`, `qwen-vl-utils` | — |
-| `cosmos_reason2_8b_hf.json` | Cosmos-Reason2-8B | HuggingFace | 1 × 16 GB | `qwen-vl-utils` | — |
-| `cosmos3_nano.json` | Cosmos3-Nano | HuggingFace | 1 × 8 GB | `transformers_cosmos3`\* | — |
-| `cosmos_reason2_api.json` | Cosmos-Reason2-8B | API (Lepton/NIM) | None | `qwen-vl-utils`, `ffmpeg` | `COSMOS_REASON2_API_BASE`, `COSMOS_API_KEY` or `NVIDIA_API_KEY` |
-| `gpt4o.json` | GPT-4o | OpenAI API | None | — | `OPENAI_API_KEY` |
+## How close a rerun gets
 
-\* `transformers_cosmos3` is installed from source:
-```bash
-pip install "transformers_cosmos3 @ git+https://github.com/NVIDIA/cosmos-framework.git#subdirectory=packages/transformers-cosmos3"
-```
+The scores themselves are on the leaderboard at [vantage-bench.org](https://vantage-bench.org/). Expect most tasks to land within about one to three points of them, not exactly on them:
 
----
-
-## Config File Format
-
-```jsonc
-{
-    "_comment": "ignored by the parser — human-readable note",
-    "model": {
-        "<display-name>": {
-            "class": "<VLM class from vlmeval/vlm/ or vlmeval/api/>",
-            // ... constructor kwargs passed directly to the class
-        }
-    },
-    "data": {
-        // Video tasks: empty dict — loaded from supported_video_datasets registry
-        "VANTAGE_VQA_8frame": {},
-        // Image tasks: must specify class (not in video registry)
-        "VANTAGE_2DGrounding": {
-            "class": "VANTAGE_2DGroundingDataset",
-            "dataset": "VANTAGE_2DGrounding"
-        }
-    }
-}
-```
-
-**Why image tasks need `"class"`**: video-task names are in the `supported_video_datasets` registry and can be instantiated with `{}`. Image datasets (`VANTAGE_2DGrounding`, `VANTAGE_2DPointing`, `Astro2D`) are not in that registry, so the config must name the Python class explicitly.
-
----
-
-## Adjusting for Your Hardware
-
-**Fewer GPUs**: lower `tensor_parallel_size` (must divide evenly into the model's attention heads).
-
-**Less VRAM**: lower `gpu_memory_utilization` (e.g. 0.75) or reduce `max_model_len`.
-
-**Subset of tasks**: remove entries from `"data"`.
-
-**Custom model checkpoint**: override `model_path` with a local directory path.
-
----
-
-## See Also
-
-- [SUBMISSION.md](../SUBMISSION.md) — packaging and submitting results
-- [docs/vantage/DEVELOPER_GUIDE.md](../docs/vantage/DEVELOPER_GUIDE.md) — full flag reference and model registration details
-- [README_VANTAGE.md](../README_VANTAGE.md) — per-model install requirements
+- **Sampling.** The Qwen models sample at temperature 0.7 (0.3 for Qwen3.5 captioning, 0.1 for Qwen3.5 tracking), so every run differs a little.
+- **Data.** Most of our v1.0 runs read an internal copy of the data. The public release has anonymized video names, and 46 Event Verification rows carry a differently worded per-clip system prompt.
+- **Cosmos Event Verification.** Our runs also sent the system message "You are a helpful assistant."; `Cosmos3vLLM` cannot send a system message.
+- **Qwen3-VL-32B tracking** uses a maximum context of 98,304 tokens instead of the 131,072 our runs used, so the KV cache fits on two 80 GB GPUs. This only matters for a request longer than 98,304 tokens.
+- **Score review.** A few leaderboard cells were adjusted during the v1.0 score review (for example Astro2D moved to pooled F1), so a raw rerun can differ from them for that reason too.
+- **Dense video captioning scored locally.** The local evaluator skips videos with no usable prediction, while the leaderboard scores them as 0, so a local DVC score can come out higher for a model that fails on some videos.

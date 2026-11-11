@@ -1,0 +1,86 @@
+{
+    "_comment": "Settings behind our v1.0 leaderboard scores for Cosmos3-Super. vLLM, 2 GPUs with 80 GB. vLLM loads a Qwen3-VL-format conversion of nvidia/Cosmos3-Super, which you create yourself; set model_path to it. Our EV runs also sent the system message 'You are a helpful assistant.', which Cosmos3vLLM cannot send. Run: python scripts/reproduce.py configs/cosmos3_super.json",
+    "name": "Cosmos3-Super",
+    "model": {
+        "class": "Cosmos3vLLM",
+        "model_path": "converted/Cosmos3-Super-qwen3vl",
+        "tensor_parallel_size": 2,
+        "max_model_len": 131072,
+        "temperature": 0,
+        "max_new_tokens": 8192
+    },
+    "tasks": {
+        "VANTAGE_VQA_4fps": {
+            "data": {
+                "class": "VANTAGE_VQA",
+                "dataset": "VANTAGE_VQA",
+                "fps": 4,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_EventVerification_4fps": {
+            "data": {
+                "class": "VANTAGE_EventVerification",
+                "dataset": "VANTAGE_EventVerification",
+                "fps": 4,
+                "max_frames": 256,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_Temporal_10fps": {
+            "data": {
+                "class": "VANTAGE_Temporal",
+                "dataset": "VANTAGE_Temporal",
+                "fps": 10,
+                "max_frames": 256,
+                "max_pixels": 921600,
+                "total_pixels": 16777216
+            }
+        },
+        "VANTAGE_DVC_4fps": {
+            "data": {
+                "class": "VANTAGE_DVC",
+                "dataset": "VANTAGE_DVC",
+                "fps": 4,
+                "max_frames": 128,
+                "total_pixels": 8388608
+            },
+            "model": {
+                "max_new_tokens": 16384
+            }
+        },
+        "VANTAGE_SOT": {
+            "data": {
+                "class": "VANTAGE_SOT",
+                "dataset": "VANTAGE_SOT",
+                "model_family": "cr"
+            }
+        },
+        "VANTAGE_2DGrounding": {
+            "data": {
+                "class": "VANTAGE_2DGroundingDataset",
+                "dataset": "VANTAGE_2DGrounding"
+            },
+            "model": {
+                "max_new_tokens": 4096
+            }
+        },
+        "VANTAGE_2DPointing": {
+            "data": {
+                "class": "VANTAGE_2DPointing",
+                "dataset": "VANTAGE_2DPointing"
+            },
+            "model": {
+                "max_new_tokens": 512
+            }
+        },
+        "Astro2D": {
+            "data": {
+                "class": "Astro2DDetectionDataset",
+                "dataset": "Astro2D"
+            }
+        }
+    }
+}

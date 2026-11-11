@@ -10,7 +10,7 @@ confirmation) the full run, with monitoring and resume support.
 
 Map the pillars/tasks the user wants to `--data` dataset keys via
 [`skills/reference/tasks-and-pillars.md`](../reference/tasks-and-pillars.md) —
-do not hand-write dataset key names. Default to the `8frame`/default variant
+do not hand-write dataset key names. Default to the standard (leaderboard) key
 per task unless the user asks for a different sampling rate.
 
 ## 2. State detection

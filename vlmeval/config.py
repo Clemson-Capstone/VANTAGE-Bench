@@ -2149,7 +2149,7 @@ cosmos_series = {
     ),
     'Cosmos3-Nano': partial(Cosmos3, model_path='nvidia/Cosmos3-Nano'),
     # Cosmos3-Nano-vLLM requires a pre-converted Qwen3VL checkpoint.
-    # Run scripts/convert_cosmos3_for_vllm.py first, then override model_path
+    # Convert the checkpoint to Qwen3-VL format yourself, then override model_path
     # via a config JSON file pointing to the converted checkpoint directory.
     'Cosmos3-Nano-vLLM': partial(
         Cosmos3vLLM,
