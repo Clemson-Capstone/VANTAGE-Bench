@@ -8,7 +8,7 @@
   <a href="https://vantage-bench.org/#leaderboard"><img alt="Leaderboard" src="https://img.shields.io/badge/Leaderboard-live-522D80"></a>
   <a href="https://arxiv.org/abs/2609.09396"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2609.09396-b31b1b"></a>
   <a href="https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench"><img alt="Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-PhysicalAI--VANTAGE--Bench-FF8800"></a>
-  <a href="CHANGELOG.md"><img alt="Release" src="https://img.shields.io/badge/release-v1.1.0-522D80"></a>
+  <a href="CHANGELOG.md"><img alt="Release" src="https://img.shields.io/badge/release-v1.2.0-522D80"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-1F8F66"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-1E63B5">
 </p>
@@ -27,6 +27,7 @@
 
 ## News
 
+- **[2026-11-11]** Harness v1.2.0: our run settings are public and the default, with configs for the Qwen and Cosmos leaderboard models and `scripts/reproduce.py`. See the [changelog](CHANGELOG.md).
 - **[2026-10-06]** Harness v1.1.0: native Gemini support, agentic skills, submission validation, faster DVC scoring. See the [changelog](CHANGELOG.md).
 - **[2026-09-30]** Packaging works from any run mode, and `run.py` ends with a status table for every model and dataset. ([#5](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/5))
 - **[2026-09-08]** The VANTAGE-Bench paper is on arXiv: [2609.09396](https://arxiv.org/abs/2609.09396).

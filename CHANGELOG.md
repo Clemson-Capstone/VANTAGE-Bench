@@ -4,27 +4,26 @@ Notable changes to the VANTAGE-Bench harness. The newest release is first.
 
 Versions follow [Semantic Versioning](https://semver.org/). Benchmark results, new models on the leaderboard and announcements are listed at [vantage-bench.org](https://vantage-bench.org/#updates).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-11
+
+Our run settings are public, and they are the default: the standard dataset keys and prompts match the leaderboard runs, so results are comparable out of the box.
 
 ### Added
 
-- **Leaderboard configs.** `configs/` holds the exact settings and prompts for Qwen3-VL-8B/32B, Qwen3.5-9B/27B, Cosmos-Reason2-8B and Cosmos3-Nano/Super. `scripts/reproduce.py` runs one, using a separate `run.py` call for each group of tasks that share model settings.
-- **Prompt templates for VQA and Event Verification.** A `custom_prompt` containing `{question}` is used as the full prompt: VQA fills `{question}` and `{options}`, Event Verification fills `{system_prompt}` and `{question}`.
+- **Leaderboard configs.** `configs/` holds the settings behind our scores for Qwen3-VL-8B/32B, Qwen3.5-9B/27B, Cosmos-Reason2-8B and Cosmos3-Nano/Super, and `scripts/reproduce.py` runs one, using a separate `run.py` call for each group of tasks that share model settings. They replace the seven old sample configs. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
+- **Prompt templates for VQA and Event Verification.** A `custom_prompt` containing `{question}` is used as the full prompt: VQA fills `{question}` and `{options}`, Event Verification fills `{system_prompt}` and `{question}`. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
 
-### Fixed
+### Improved
 
-- **Event Verification keeps `max_frames` and `max_pixels`.** They were reset to `None` during construction and never reached the model.
-- **Event Verification sends the per-clip system prompt to frame-based models.** Models that take frames instead of video received only the bare question.
+- **The leaderboard prompts are the default for VQA, Event Verification and Temporal Localization.** VQA sends the question, the lettered choices and the answer instruction, with no opening paragraph; Event Verification sends the per-clip system prompt, a blank line and the question; Temporal Localization asks `When does "{event}" happen in the video?` followed by the JSON instruction. Results from earlier default runs of these three tasks are not directly comparable. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
+- **`VANTAGE_EventVerification_4fps` and `VANTAGE_Temporal_10fps` match the leaderboard settings.** Event Verification allows 16,777,216 pixels per video (was 8,388,608), and Temporal Localization caps each frame at 921,600 pixels. Results from earlier runs of these two keys are not directly comparable. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
+- **Event Verification keeps `max_frames` and `max_pixels`.** They were reset to `None` during construction and never reached the model. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
+- **Event Verification sends the per-clip system prompt to frame-based models.** Models that take frames instead of video received only the bare question. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
 
-### Removed
+### Documentation
 
-- **The old sample configs** (`cosmos_reason2_8b.json`, `cosmos_reason2_32b.json`, `cosmos_reason1_7b.json`, `cosmos_reason2_8b_hf.json`, `cosmos3_nano.json`, `cosmos_reason2_api.json`, `gpt4o.json`). The leaderboard configs replace them in `configs/`.
-
-### Changed
-
-- **The leaderboard prompts are the default for VQA, Event Verification and Temporal Localization.** Without a `custom_prompt`, VQA sends the question, the lettered choices and the answer instruction, with no opening paragraph; Event Verification sends the per-clip system prompt, a blank line and the question; Temporal Localization sends `When does "{event}" happen in the video?` followed by the JSON instruction. Results from earlier default runs of these three tasks are not directly comparable.
-- **The leaderboard run settings are the default.** The README, SUBMISSION guide, developer guide and skills now use `VANTAGE_VQA_4fps`, `VANTAGE_EventVerification_4fps`, `VANTAGE_Temporal_10fps` and `VANTAGE_DVC_4fps` instead of the `_8frame` keys, and the README has a "Standard run settings" table. The `_8frame` keys remain registered for ablations.
-- **`VANTAGE_EventVerification_4fps` and `VANTAGE_Temporal_10fps` match the leaderboard settings.** Event Verification now allows 16,777,216 pixels per video (was 8,388,608), and Temporal Localization caps each frame at 921,600 pixels. Results from earlier runs of these two keys are not directly comparable.
+- The README, submission guides, developer guide and skills use the standard dataset keys (`VANTAGE_VQA_4fps`, `VANTAGE_EventVerification_4fps`, `VANTAGE_Temporal_10fps`, `VANTAGE_DVC_4fps`) instead of the `_8frame` keys, and the README has a "Standard run settings" table. The `_8frame` keys remain registered for ablations. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
+- The prompt guide shows the default prompts. ([#7](https://github.com/Clemson-Capstone/VANTAGE-Bench/pull/7))
 
 ## [1.1.0] - 2026-10-06
 
@@ -71,5 +70,6 @@ The first public release of the VANTAGE-Bench harness, alongside the leaderboard
 - Submission emitter that writes one JSONL file per task for server-side scoring.
 - Cosmos model wrappers for local, vLLM and API inference.
 
+[1.2.0]: https://github.com/Clemson-Capstone/VANTAGE-Bench/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Clemson-Capstone/VANTAGE-Bench/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Clemson-Capstone/VANTAGE-Bench/releases/tag/v1.0.0
