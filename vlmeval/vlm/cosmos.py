@@ -255,11 +255,9 @@ class Cosmos3(BaseModel):
 class Cosmos3vLLM(BaseModel):
     """Cosmos3 family via vLLM using a pre-converted Qwen3VL checkpoint.
 
-    Before first use, run the one-time weight conversion:
-        python scripts/convert_cosmos3_for_vllm.py
-
-    This converts nvidia/Cosmos3-Nano to a standard Qwen3VLForConditionalGeneration
-    checkpoint that vLLM can load natively (no custom key-mapping at runtime).
+    model_path must point to a Cosmos3 checkpoint (Nano or Super) that you have
+    converted to a standard Qwen3VLForConditionalGeneration checkpoint, which
+    vLLM loads natively (no custom key-mapping at runtime).
     """
 
     INSTALL_REQ = False

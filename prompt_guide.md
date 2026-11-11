@@ -7,11 +7,13 @@ The VANTAGE Temporal benchmark evaluates a model’s ability to pinpoint the exa
 
 **Template:**
 
-    {Question} Please provide the result in json format with 'mm:ss.ss' format for time depiction for the event. Use keywords 'start', 'end' in the json output.
+    When does "{Event}" happen in the video? Please provide the result in json format with 'mm:ss.ss' format for time depiction for the event. Use keywords 'start', 'end' in the json output.
+
+`{Event}` is the event description taken from the question in the dataset.
 
 **Example:**
     
-    At what point does a dark red car entering from the right of the frame drive ahead and turn right without a proper right turn signal happen in the video? Please provide the result in json format with 'mm:ss.ss' format for time depiction for the event. Use keywords 'start', 'end' in the json output.
+    When does "Two men in black outfits enter a room with an open door, one after the other, without scanning key cards." happen in the video? Please provide the result in json format with 'mm:ss.ss' format for time depiction for the event. Use keywords 'start', 'end' in the json output.
 
 | Feature | Requirement |
 | :--- | :--- |
@@ -34,15 +36,17 @@ This benchmark serves as a diagnostic tool for semantic understanding. It presen
 ### Prompt Format
 **Template:**
 
-    You are an event verification assistant. Given a video and a statement about an event, determine whether the statement is true or false. Answer with 'Yes' if the statement is true, or 'No' if it is false.
+    {System prompt}
 
-    Question: {Question}
+    {Question}
+
+Each clip has its own system prompt in the dataset, which says what counts as a "Yes" for that kind of event.
 
 **Example:**
     
     You are an event verification assistant. Given a video and a statement about an event, determine whether the statement is true or false. Answer with 'Yes' if the statement is true, or 'No' if it is false.
 
-    Question: Does the forklift falls over and crashes to the ground?
+    Does the forklift falls over and crashes to the ground?
 
 | Feature | Requirement |
 | :--- | :--- |
@@ -55,9 +59,6 @@ VANTAGE VQA is the suite's most comprehensive semantic benchmark. It uses a Mult
 ### Prompt Format
 **Template:**
 ```text
-You are provided with a sequence of video frames depicting a scene. 
-Begin with a concise overview of what's happening; keep items conceptual, not implementation-level. 
-Answer the question based only on the visual content of the image.
 Question: {Question}
 Select your answer from the choices below:
 {Options}
@@ -66,9 +67,6 @@ Respond with ONLY the letter corresponding to your answer (A, B, C, or D). Do no
 
 **Example:**
 ```text
-You are provided with a sequence of video frames depicting a scene. 
-Begin with a concise overview of what's happening; keep items conceptual, not implementation-level. 
-Answer the question based only on the visual content of the image.
 Question: How many people are walking by the forklift?
 Select your answer from the choices below:
 A. 1

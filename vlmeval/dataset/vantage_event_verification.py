@@ -48,6 +48,8 @@ class VANTAGE_EventVerification(VideoBaseDataset):
             nframe=nframe,
             fps=fps,
             total_pixels=total_pixels,
+            max_pixels=max_pixels,
+            max_frames=max_frames,
             custom_prompt=custom_prompt
         )
         if nsamples is not None:
@@ -139,12 +141,17 @@ class VANTAGE_EventVerification(VideoBaseDataset):
         video_path = Path(video) if Path(video).is_absolute() else Path(self.data_root) / 'videos' / video
         question = line['question']
         system_prompt = line['system_prompt']
-        if self.custom_prompt is not None:
+        if self.custom_prompt is not None and '{question}' in self.custom_prompt:
+            # Template: {system_prompt} and {question} are filled per sample.
+            sp = system_prompt if isinstance(system_prompt, str) else ''
+            full_text_payload = self.custom_prompt.replace('{system_prompt}', sp).replace('{question}', str(question))
+        elif self.custom_prompt is not None:
             full_text_payload = f"{self.custom_prompt}\n\nQuestion: {question}"
         else:
             if not isinstance(system_prompt, str) or not system_prompt.strip():
                 system_prompt = None
-            full_text_payload = f"{system_prompt}\n\nQuestion: {question}" if system_prompt else question
+            # Leaderboard format: the per-clip system prompt, a blank line, then the question.
+            full_text_payload = f"{system_prompt}\n\n{question}" if system_prompt else str(question)
 
         msgs = []
         if video_llm:
@@ -169,7 +176,9 @@ class VANTAGE_EventVerification(VideoBaseDataset):
                 for frame in frames:
                     msgs.append(dict(type='image', value=frame))
                 msgs.append({'type': 'text', 'value': f"You are provided with {len(frames)} frames uniformly sampled from the video."})
-            msgs.append({'type': 'text', 'value': question})
+            # Same text the video path sends: the per-clip system prompt defines
+            # what counts as "Yes", which the bare question does not.
+            msgs.append({'type': 'text', 'value': full_text_payload})
         #print(f"DEBUG: Msgs {msgs}")
         return msgs
 

@@ -41,10 +41,10 @@ export LMUData=~/LMUData
 
 # Example: all four pillars (inference + evaluation in one step)
 python run.py \
-  --data VANTAGE_VQA_8frame \
-        VANTAGE_EventVerification_8frame \
-        VANTAGE_Temporal_8frame \
-        VANTAGE_DVC_8frame \
+  --data VANTAGE_VQA_4fps \
+        VANTAGE_EventVerification_4fps \
+        VANTAGE_Temporal_10fps \
+        VANTAGE_DVC_4fps \
         VANTAGE_SOT \
         VANTAGE_2DGrounding \
         VANTAGE_2DPointing \
@@ -57,10 +57,10 @@ Each task writes a `*_submission.jsonl` file next to its prediction xlsx:
 
 ```
 outputs/<model>/<eval_id>/
-├── <model>_VANTAGE_VQA_8frame.xlsx
-├── <model>_VANTAGE_VQA_8frame_submission.jsonl
-├── <model>_VANTAGE_EventVerification_8frame.xlsx
-├── <model>_VANTAGE_EventVerification_8frame_submission.jsonl
+├── <model>_VANTAGE_VQA_4fps.xlsx
+├── <model>_VANTAGE_VQA_4fps_submission.jsonl
+├── <model>_VANTAGE_EventVerification_4fps.xlsx
+├── <model>_VANTAGE_EventVerification_4fps_submission.jsonl
 ├── ...
 └── <model>_Astro2D_submission.jsonl
 ```

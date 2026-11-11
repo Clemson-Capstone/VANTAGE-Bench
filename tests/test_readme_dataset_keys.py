@@ -46,8 +46,8 @@ KEYS = readme_data_keys()
 
 def test_readme_lists_the_eight_task_keys():
     # The parser must find at least one key for the check to be meaningful.
-    for k in ['VANTAGE_VQA_8frame', 'VANTAGE_EventVerification_8frame', 'VANTAGE_Temporal_8frame',
-              'VANTAGE_DVC_8frame', 'VANTAGE_SOT', 'VANTAGE_2DGrounding', 'VANTAGE_2DPointing', 'Astro2D']:
+    for k in ['VANTAGE_VQA_4fps', 'VANTAGE_EventVerification_4fps', 'VANTAGE_Temporal_10fps',
+              'VANTAGE_DVC_4fps', 'VANTAGE_SOT', 'VANTAGE_2DGrounding', 'VANTAGE_2DPointing', 'Astro2D']:
         assert k in KEYS
 
 

@@ -27,14 +27,22 @@ python run.py --data <dataset_key> --model <NameFromSupportedVLM> --verbose
 
 ## (b) Config JSON
 
-Start from an existing file under `configs/*.json` rather than writing from scratch — they're
-already correct, runnable templates (`configs/README.md` lists all of them with their
-GPU/package/env-var requirements). Copy the closest match and edit `model.<label>` in place;
-leave the `data` block as-is unless trimming to a subset of tasks.
+For a model in `configs/` (the leaderboard configs: Qwen3-VL, Qwen3.5, Cosmos-Reason2-8B,
+Cosmos3-Nano/Super), run that config as-is. It holds
+the exact leaderboard settings, including per-task model overrides, so it runs through
+`scripts/reproduce.py`, not `run.py --config`:
 
 ```bash
-python run.py --config configs/<closest-match>.json --work-dir ./outputs
-# or: python run.py configs/<closest-match>.json   (positional shortcut, same effect)
+python scripts/reproduce.py configs/<model>.json --dry-run    # check first
+python scripts/reproduce.py configs/<model>.json
+```
+
+For any other model, write a plain `run.py` config (format in `README_VANTAGE.md` §6). Use the
+standard dataset keys and take the model settings from the closest leaderboard config:
+
+```bash
+python run.py --config my_model.json --work-dir ./outputs
+# or: python run.py my_model.json   (positional shortcut, same effect)
 ```
 
 Do not combine `--config` with `--data`/`--model` — `run.py` treats them as mutually exclusive
@@ -60,7 +68,7 @@ input modes.
 | `CosmosReason2` (API) | `model`, `temperature`, `top_p`, `max_tokens` | `COSMOS_REASON2_API_BASE` (full URL, must end `/v1/chat/completions`), `COSMOS_API_KEY` or `NVIDIA_API_KEY` |
 
 For multi-GPU vLLM, `tensor_parallel_size` must divide evenly into the model's attention
-heads (`configs/README.md`) — see `../vantage-preflight/SKILL.md` for a sizing recommendation
+heads — see `../vantage-preflight/SKILL.md` for a sizing recommendation
 based on detected GPU count.
 
 ## Setting env vars
@@ -87,4 +95,4 @@ etc.) — that persists the secret beyond this session and this repo.
 ## Further reading
 
 `README_VANTAGE.md` §6 (config format), §7 (param passing), §12 (per-model requirements);
-`configs/README.md` (all templates + hardware notes).
+`configs/README.md` (leaderboard configs and GPU/API requirements).

@@ -108,7 +108,7 @@ Most API wrappers in `vlmeval/api/` read these standard variables. Per-model env
 You can also override the data root at the CLI level without setting an env var:
 
 ```bash
-python run.py --lmudata-root /path/to/data --data VANTAGE_VQA_8frame --model <ModelName>
+python run.py --lmudata-root /path/to/data --data VANTAGE_VQA_4fps --model <ModelName>
 ```
 
 ---
@@ -126,7 +126,7 @@ Pass any of these strings as the `--data` argument or as a key in the config JSO
 | `VANTAGE_VQA_8frame` | 8 frames uniformly sampled |
 | `VANTAGE_VQA_16frame` | 16 frames |
 | `VANTAGE_VQA_64frame` | 64 frames |
-| `VANTAGE_VQA_4fps` | 4 fps (up to 256 frames, pixel-capped) |
+| `VANTAGE_VQA_4fps` | **standard**: 4 fps, up to 256 frames, 921,600 px per frame, 16,777,216 px in total |
 | `VANTAGE_VQA_1fps` | 1 frame per second |
 | `VANTAGE_VQA_0.5fps` | 0.5 fps |
 | `VANTAGE_VQA_8frame_200` | 8 frames, 200-sample subset (seed 42) |
@@ -140,7 +140,7 @@ Pass any of these strings as the `--data` argument or as a key in the config JSO
 | `VANTAGE_Temporal_64frame` | 64 frames |
 | `VANTAGE_Temporal_1fps` | 1 fps |
 | `VANTAGE_Temporal_0.5fps` | 0.5 fps |
-| `VANTAGE_Temporal_10fps` | 10 fps |
+| `VANTAGE_Temporal_10fps` | **standard**: 10 fps, up to 256 frames, 921,600 px per frame, 16,777,216 px in total |
 
 #### VANTAGE_DVC — dense video captioning
 
@@ -150,7 +150,7 @@ Pass any of these strings as the `--data` argument or as a key in the config JSO
 | `VANTAGE_DVC_64frame` | 64 frames |
 | `VANTAGE_DVC_1fps` | 1 fps |
 | `VANTAGE_DVC_2fps` | 2 fps |
-| `VANTAGE_DVC_4fps` | 4 fps |
+| `VANTAGE_DVC_4fps` | **standard**: 4 fps, up to 128 frames, 8,388,608 px in total |
 
 #### VANTAGE_EventVerification — event physics yes/no
 
@@ -159,13 +159,13 @@ Pass any of these strings as the `--data` argument or as a key in the config JSO
 | `VANTAGE_EventVerification_8frame` | 8 frames (fps override=0 to force nframe mode) |
 | `VANTAGE_EventVerification_16frame` | 16 frames |
 | `VANTAGE_EventVerification_1fps` | 1 fps |
-| `VANTAGE_EventVerification_4fps` | 4 fps |
+| `VANTAGE_EventVerification_4fps` | **standard**: 4 fps, up to 256 frames, 16,777,216 px in total |
 
 #### VANTAGE_SOT — single-object tracking
 
 | Dataset key | Notes |
 |-------------|-------|
-| `VANTAGE_SOT` | default 8 frames, stride 15 |
+| `VANTAGE_SOT` | **standard**: 8 frames, stride 15 |
 | `VANTAGE_SOT_16f` | 16 frames |
 | `VANTAGE_SOT_32f` | 32 frames |
 
@@ -189,7 +189,7 @@ Run all commands from the repo root with your conda environment active. Replace 
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame \
+  --data VANTAGE_VQA_4fps \
   --model <ModelName> \
   --verbose
 ```
@@ -198,7 +198,7 @@ python run.py \
 
 ```bash
 python run.py \
-  --data VANTAGE_Temporal_8frame \
+  --data VANTAGE_Temporal_10fps \
   --model <ModelName> \
   --verbose
 ```
@@ -207,7 +207,7 @@ python run.py \
 
 ```bash
 python run.py \
-  --data VANTAGE_DVC_8frame \
+  --data VANTAGE_DVC_4fps \
   --model <ModelName> \
   --verbose
 ```
@@ -216,7 +216,7 @@ python run.py \
 
 ```bash
 python run.py \
-  --data VANTAGE_EventVerification_8frame \
+  --data VANTAGE_EventVerification_4fps \
   --model <ModelName> \
   --verbose
 ```
@@ -234,7 +234,7 @@ python run.py \
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame VANTAGE_Temporal_8frame VANTAGE_DVC_8frame \
+  --data VANTAGE_VQA_4fps VANTAGE_Temporal_10fps VANTAGE_DVC_4fps \
   --model <ModelName> \
   --verbose
 ```
@@ -314,7 +314,7 @@ python run.py path/to/my_config.json
         }
     },
     "data": {
-        "VANTAGE_VQA_8frame": {},
+        "VANTAGE_VQA_4fps": {},
 
         "VANTAGE_VQA_16frame": {},
 
@@ -353,7 +353,7 @@ python run.py path/to/my_config.json
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame \
+  --data VANTAGE_VQA_4fps \
   --model <ModelName> \
   --retry 5 \
   --api-nproc 8 \
@@ -375,7 +375,7 @@ python run.py \
             "timeout": 300
         }
     },
-    "data": { "VANTAGE_VQA_8frame": {} }
+    "data": { "VANTAGE_VQA_4fps": {} }
 }
 ```
 
@@ -384,7 +384,7 @@ python run.py \
 Any name defined in `supported_VLM` inside `vlmeval/config.py` can be used directly without a config file:
 
 ```bash
-python run.py --data VANTAGE_VQA_8frame --model <RegisteredModelName>
+python run.py --data VANTAGE_VQA_4fps --model <RegisteredModelName>
 ```
 
 ### Three model backends
@@ -409,7 +409,7 @@ For **multi-GPU vLLM**, pass `tensor_parallel_size` via config file:
             "tensor_parallel_size": 4
         }
     },
-    "data": { "VANTAGE_Temporal_8frame": {} }
+    "data": { "VANTAGE_Temporal_10fps": {} }
 }
 ```
 
@@ -421,19 +421,19 @@ For **multi-GPU vLLM**, pass `tensor_parallel_size` via config file:
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame \
+  --data VANTAGE_VQA_4fps \
   --model <ModelName> \
   --mode infer \
   --work-dir ./outputs
 ```
 
-Writes `./outputs/<model>/<eval_id>/<model>_VANTAGE_VQA_8frame.xlsx` (or `.tsv`).
+Writes `./outputs/<model>/<eval_id>/<model>_VANTAGE_VQA_4fps.xlsx` (or `.tsv`).
 
 ### Evaluation only (reuse existing prediction file)
 
 ```bash
 python run.py \
-  --data VANTAGE_VQA_8frame \
+  --data VANTAGE_VQA_4fps \
   --model <ModelName> \
   --mode eval \
   --reuse \
@@ -452,14 +452,14 @@ See [docs/vantage/VANTAGEEvalInputs.md](docs/vantage/VANTAGEEvalInputs.md) for t
 ./outputs/
 └── <model_name>/
     └── <eval_id>/
-        ├── <model>_VANTAGE_VQA_8frame.xlsx          # raw predictions
-        ├── <model>_VANTAGE_VQA_8frame_acc.csv        # accuracy results
-        ├── <model>_VANTAGE_Temporal_8frame.xlsx
-        ├── <model>_VANTAGE_Temporal_8frame_metrics.json
-        ├── <model>_VANTAGE_DVC_8frame.xlsx
-        ├── <model>_VANTAGE_DVC_8frame_metrics.json
-        ├── <model>_VANTAGE_EventVerification_8frame.xlsx
-        ├── <model>_VANTAGE_EventVerification_8frame_acc.json
+        ├── <model>_VANTAGE_VQA_4fps.xlsx          # raw predictions
+        ├── <model>_VANTAGE_VQA_4fps_acc.csv        # accuracy results
+        ├── <model>_VANTAGE_Temporal_10fps.xlsx
+        ├── <model>_VANTAGE_Temporal_10fps_metrics.json
+        ├── <model>_VANTAGE_DVC_4fps.xlsx
+        ├── <model>_VANTAGE_DVC_4fps_metrics.json
+        ├── <model>_VANTAGE_EventVerification_4fps.xlsx
+        ├── <model>_VANTAGE_EventVerification_4fps_acc.json
         └── <model>_VANTAGE_SOT.xlsx
 ```
 
@@ -503,28 +503,26 @@ Each evaluator's minimum required columns are documented in [docs/vantage/VANTAG
 
 Each model backend has different install and hardware requirements. Use the table below to pick the right setup before running.
 
-| Model class | Config file | Min GPU VRAM | Required packages | Required env vars |
+| Model class | Leaderboard config | Min GPU VRAM | Required packages | Required env vars |
 |---|---|---|---|---|
-| `Cosmos` (vLLM) | `configs/cosmos_reason2_8b.json` | 1 × 24 GB | `vllm`, `qwen-vl-utils` | — |
-| `Cosmos` (vLLM) | `configs/cosmos_reason2_32b.json` | 2 × 80 GB | `vllm`, `qwen-vl-utils` | — |
-| `Cosmos` (vLLM) | `configs/cosmos_reason1_7b.json` | 1 × 16 GB | `vllm`, `qwen-vl-utils` | — |
-| `CosmosHF` | `configs/cosmos_reason2_8b_hf.json` | 1 × 16 GB | `qwen-vl-utils` | — |
-| `Cosmos3` | `configs/cosmos3_nano.json` | 1 × 8 GB | `transformers_cosmos3`\* | — |
-| `Cosmos3vLLM` | (config or CLI key) | 1+ GPU | `vllm`, `qwen-vl-utils` | — |
-| `CosmosReason2` (API) | `configs/cosmos_reason2_api.json` | None | `qwen-vl-utils`, `ffmpeg` | `COSMOS_REASON2_API_BASE`, `COSMOS_API_KEY` or `NVIDIA_API_KEY` |
-| `GPT4V` | `configs/gpt4o.json` | None | — | `OPENAI_API_KEY` |
+| `Qwen3VLChat` (vLLM) | `configs/qwen3_vl_8b.json`, `configs/qwen3_vl_32b.json`, `configs/qwen3_5_9b.json`, `configs/qwen3_5_27b.json` | 1 × 80 GB (8B, 9B), 2 × 80 GB (32B, 27B) | `vllm` (0.23 or later for Qwen3.5), `qwen-vl-utils` | — |
+| `Cosmos3vLLM` | `configs/cosmos_reason2_8b.json`, `configs/cosmos3_nano.json`, `configs/cosmos3_super.json` | 1 × 80 GB (Cosmos-Reason2-8B), 2 × 80 GB (Cosmos3) | `vllm`, `qwen-vl-utils` | — |
+| `Cosmos` (vLLM) | (CLI key) | 1 × 24 GB | `vllm`, `qwen-vl-utils` | — |
+| `CosmosHF` | (CLI key) | 1 × 16 GB | `qwen-vl-utils` | — |
+| `Cosmos3` | (CLI key) | 1 × 8 GB | `transformers_cosmos3`\* | — |
+| `CosmosReason2` (API) | (CLI key) | None | `qwen-vl-utils`, `ffmpeg` | `COSMOS_REASON2_API_BASE`, `COSMOS_API_KEY` or `NVIDIA_API_KEY` |
+| `GPT4V` | (CLI key) | None | — | `OPENAI_API_KEY` |
+| `Gemini` | (CLI key) | None | — | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
+
+The leaderboard configs run with `python scripts/reproduce.py configs/<model>.json`.
 
 \* Install `transformers_cosmos3` from source:
 ```bash
 pip install "transformers_cosmos3 @ git+https://github.com/NVIDIA/cosmos-framework.git#subdirectory=packages/transformers-cosmos3"
 ```
 
-**Cosmos3-Nano-vLLM note**: `Cosmos3vLLM` requires a pre-converted Qwen3VL checkpoint — the raw HuggingFace model will not work directly. Run the conversion script first:
-```bash
-python scripts/convert_cosmos3_for_vllm.py --model nvidia/Cosmos3-Nano --output /path/to/converted
-```
-Then pass the output directory as `model_path` in your config.
+**Cosmos3 vLLM note**: `Cosmos3vLLM` needs a Cosmos3 checkpoint converted to the Qwen3-VL format (`Qwen3VLForConditionalGeneration`); the raw Hugging Face checkpoint does not load. Convert it yourself and pass the converted folder as `model_path`.
 
 **CosmosReason2 API note**: `COSMOS_REASON2_API_BASE` must be a **full endpoint URL** ending in `/v1/chat/completions` (e.g. `https://your-deployment.lepton.run/v1/chat/completions`). `ffmpeg` must be on `PATH` — it is used to encode video frames before sending them to the API.
 
-See [`configs/README.md`](configs/README.md) for ready-to-run config files and hardware notes.
+See [`configs/README.md`](configs/README.md) for the leaderboard configs and how close a rerun gets.

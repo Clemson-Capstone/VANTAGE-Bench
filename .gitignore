@@ -169,6 +169,7 @@ outputs/*
 demo.ipynb
 
 *.json
+!configs/*.json
 !vlmeval/dataset/utils/vgrpbench/configs/formating-prompt/**/*.json
 .vscode
 *.swp
